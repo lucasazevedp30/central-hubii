@@ -1,0 +1,37 @@
+﻿CENTRAL HUBII - INSTALAR A EXTENSAO (uma vez so)
+
+1. Extraia o pacote inteiro numa pasta fixa (ex.: Documentos\hubii-pacote).
+2. No Chrome (perfil Profile 3), abra chrome://extensions
+3. Ligue "Modo do desenvolvedor" (canto superior direito).
+4. Clique em "Carregar sem compactacao" e escolha a pasta "extensao-central-hubii".
+5. Libere pop-ups para hub.hubii.co (necessario para a aba da etiqueta).
+6. Se ja tinha a extensao antiga "Baixa Hubii", REMOVA ela em chrome://extensions: a Central agora ja inclui a baixa.
+   Esta unica extensao cobre: Hubii (impressao, coletar e verificar pendencias), OneHub (consultar) e OnePet (baixa).
+
+USO DIARIO
+- Abra a Central-Hubii.bat.
+- Impressora: antes de abrir o Chrome, Descritivos e Etiquetas esquecem a ultima impressora que o Chrome lembrava (limpar-impressora-chrome.ps1, fica na mesma pasta dos .bat), entao ele usa a impressora padrao que a Central acabou de trocar. Nao precisa mais fechar o Chrome e escolher a Argox a mao. Se algum dia nao funcionar, o arquivo Preferences.central-bak, na pasta do perfil do Chrome, e a copia de seguranca.
+- Imprimir Descritivos: troca a impressora (MP-4200 TH), configura o Chrome e abre o Hubii. O Hubii vai sozinho para Despacho + "Esperando NFe do Hub", le todas as paginas e mostra a LISTA. Nada e faturado ate voce conferir e clicar em Confirmar.
+- Imprimir Etiquetas: troca para a Argox, liga o ajudante e abre o Hubii em Despacho + "Esperando Expedicao". A lista mostra a memoria dos descritivos (ordem, ja impressas, fora da memoria). Nada imprime ate voce confirmar.
+- Se o Hubii ja estiver aberto, use o botao "Central Hubii" no canto inferior esquerdo da pagina.
+
+PENDENCIAS E BAIXA
+- Coletar pendencias: fica no OnePet, na tela de Pendencias (botao roxo no canto inferior esquerdo). Na Central, o cartao "Coletar pendencias" abre essa tela e ja inicia.
+- Verificar pendencias: Painel Hubii (botao roxo "Central Hubii"); Consultar OneHub: no OneHub. Substitui os favoritos.
+- Baixa guiada pela planilha: 1) rode Coletar pendencias no OnePet; 2) na mesma tela, no painel "Baixa Hubii", clique em "Carregar planilha" e escolha o .xlsx ou .csv (le a aba Dar baixa, na ordem, so confiabilidade >= o minimo, padrao 9); 3) confira a lista, escolha Teste 1 e clique em Iniciar. A coleta completa total e codigo de cada cliente; nomes repetidos ficam sem codigo e o painel avisa.
+
+A LISTA (o antigo SO_LISTAR = true)
+- Verde: o numero lido bate com "Mostrando X de N pedidos" da tela. Vermelho: nao bate; so segue se voce marcar que esta ciente.
+- Desmarque o que nao quiser; "Quantos agora" limita a quantidade; "Ler de novo" refaz a leitura.
+- Etiquetas: pedidos fora da memoria (ex.: impressos a mao) aparecem desmarcados.
+- A memoria e a mesma dos favoritos antigos (vale 72h); nao precisa mais dos favoritos.
+
+TESTE SEM RISCO: abra teste-fake\teste-hubii.html (veja teste-fake\LEIA-ME.txt).
+
+ATALHO COM LOGO: de dois cliques em Criar-atalho-Central.bat. Ele cria "Central Hubii" na Area de Trabalho e, nesta pasta, os atalhos "Atalho - Descritivos", "Atalho - Etiquetas" e "Atalho - Pendencias", cada um com seu icone (um arquivo .bat nao pode ter icone proprio, so o atalho). Use sempre os atalhos.
+
+REIMPRIMIR DESCRITIVOS: se a impressora falhar no meio, na janela da Central abra a aba Impressao e clique em "Reimprimir descritivos". O Hubii mostra a lista dos ultimos descritivos; marque so os que nao sairam (ha o botao "daqui ate o fim") e confirme. Nada e faturado.
+
+CHROME DA CENTRAL (separado do Chrome normal): Descritivos, Etiquetas e Reimprimir abrem um Chrome proprio da Central, com impressao direta SO nele. O Chrome normal da loja nunca e fechado e continua com a janela de impressao normal (escolha da impressora). Na PRIMEIRA vez, a Central abre esse Chrome e mostra o que fazer: entrar no Hubii e carregar a extensao (chrome://extensions > Modo do desenvolvedor > Carregar sem compactacao > pasta extensao-central-hubii). Ao atualizar a extensao (trocar a pasta), recarregue-a nos dois Chromes. Use o Chrome da Central so para o Hubii: qualquer impressao nele sai direto. Pendencias, Verificar e Baixa continuam no Chrome normal. A impressora padrao da loja e a MP-4200 TH: apos as etiquetas, feche a janela do ajudante (ou use o botao Voltar a MP-4200 como padrao).
+
+POP-UPS NO CHROME DA CENTRAL: a aba da etiqueta/descritivo abre como pop-up. Se o Chrome da Central bloquear (a aba nao abre e depende do seu clique), a Central libera sozinha os pop-ups do Hubii antes de abrir; se nao conseguir, abra chrome://settings/content/popups no Chrome da Central e adicione https://hub.hubii.co em "Permitido enviar pop-ups".

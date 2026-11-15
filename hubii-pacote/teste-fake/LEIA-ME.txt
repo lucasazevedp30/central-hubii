@@ -1,0 +1,14 @@
+PAGINA DE TESTE (Hubii FAKE) - nada e real, nada e impresso
+
+Como usar:
+1. De dois cliques em teste-fake\teste-hubii.html (abre no Chrome).
+2. Clique em "Central Hubii" (canto inferior esquerdo) -> Imprimir Descritivos ou Imprimir Etiquetas.
+   Ou use os links "Abrir como Descritivos / Etiquetas" na faixa amarela (simula o que a Central faz).
+3. Confira a lista, confirme e veja a rotina andar. "Reiniciar pedidos" volta ao inicio.
+
+Observacoes:
+- Esta pagina carrega o mesmo codigo da extensao (nao precisa instalar nada para testar aqui).
+- As etiquetas abrem uma aba FAKE que fecha sozinha em 4s. Nao liga impressora.
+- A memoria desta pagina e separada da do Hubii real (nao mistura).
+- Permita pop-ups se o Chrome bloquear a aba da etiqueta (testa o aviso tambem).
+- Ordem sugerida: Descritivos (3 pedidos) -> Etiquetas (a lista deve mostrar os 3, e os 'fora da memoria' desmarcados).

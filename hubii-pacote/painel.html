@@ -1,0 +1,807 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Central Hubii</title>
+<link rel="icon" sizes="32x32" href="/logos/central-32.png">
+<link rel="icon" sizes="48x48" href="/logos/central-48.png">
+<link rel="icon" sizes="96x96" href="/logos/central-96.png">
+<link rel="icon" sizes="192x192" href="/logos/central-192.png">
+<link rel="icon" sizes="256x256" href="/logos/central-256.png">
+<link rel="icon" sizes="512x512" href="/logos/central-512.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/logos/central-192.png">
+<style>
+:root{--navy:#1B1F48;--roxo:#5B3CC4;--roxo2:#7258DB;--roxoEsc:#3A1F6D;--fundo:#F3F1FA;--card:#fff;--borda:#E3DFF3;--txt:#1B1740;--suave:#5A5480;--ok:#0E7A3A;--okF:#E3F5EA;--av:#8A5300;--avF:#FFF1D6;--er:#B3261E;--erF:#FDE7E5;--cinzaF:#EFEDF6}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI",Arial,sans-serif;background:var(--fundo);color:var(--txt);font-size:14px}
+header{background:var(--navy);color:#fff;padding:14px 28px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:5}
+header img{width:42px;height:42px;border-radius:10px;object-fit:cover;image-rendering:auto}
+header .t1{font-size:19px;font-weight:600;letter-spacing:.2px}
+header .t2{font-size:12.5px;opacity:.75}
+header .relogio{margin-left:auto;text-align:right}
+header .relogio b{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
+main{max-width:1180px;margin:0 auto;padding:18px 28px 40px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;font-size:12.5px;font-weight:600;background:var(--cinzaF);color:var(--suave);border:1px solid transparent}
+.chip i{width:8px;height:8px;border-radius:50%;background:currentColor;display:inline-block}
+.chip.ok{background:var(--okF);color:var(--ok)}.chip.av{background:var(--avF);color:var(--av)}.chip.er{background:var(--erF);color:var(--er)}
+.alertas{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.alerta{padding:10px 14px;border-radius:10px;font-size:13.5px;border-left:4px solid}
+.alerta.ok{background:var(--okF);border-color:var(--ok);color:#0b4f27}.alerta.av{background:var(--avF);border-color:#E3A13B;color:#5c3900}.alerta.er{background:var(--erF);border-color:var(--er);color:#7a1a14}
+.metricas{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.met{background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:14px 16px}
+.met .r{font-size:12.5px;color:var(--suave);font-weight:600;display:flex;justify-content:space-between}
+.met .v{font-size:32px;font-weight:600;margin:4px 0 2px;font-variant-numeric:tabular-nums;color:var(--roxoEsc)}
+.met .s{font-size:12px;color:var(--suave);min-height:16px}
+.met .s.ok{color:var(--ok)}.met .s.av{color:var(--av)}.met .s.er{color:var(--er)}
+.barra{height:6px;background:var(--cinzaF);border-radius:9px;overflow:hidden;margin-top:6px}
+.barra>div{height:100%;background:var(--roxo);border-radius:9px;transition:width .4s}
+.andamento{background:var(--card);border:1px solid var(--roxo2);border-radius:14px;padding:14px 18px;margin-bottom:18px;display:none}
+.andamento .lin{display:flex;align-items:center;gap:12px}
+.andamento .tit{font-weight:600;font-size:15px}
+.andamento .det{color:var(--suave);font-size:12.5px;margin-top:2px}
+.pulso{width:10px;height:10px;border-radius:50%;background:var(--roxo);animation:p 1.2s infinite}
+@keyframes p{0%{box-shadow:0 0 0 0 #5b3cc466}70%{box-shadow:0 0 0 10px #5b3cc400}100%{box-shadow:0 0 0 0 #5b3cc400}}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--suave);margin:20px 0 10px;font-weight:700}
+.grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.rot{background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:6px}
+.rot .topo{display:flex;align-items:center;justify-content:space-between}
+.rot .ic{width:36px;height:36px;border-radius:10px;background:var(--cinzaF);display:flex;align-items:center;justify-content:center;color:var(--roxo)}
+.rot .ic svg{width:20px;height:20px}
+.st{font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--cinzaF);color:var(--suave)}
+.st.ok{background:var(--okF);color:var(--ok)}.st.run{background:#ECE6FF;color:var(--roxo)}.st.av{background:var(--avF);color:var(--av)}
+.rot .nome{font-size:15.5px;font-weight:600;margin-top:4px}
+.rot .desc{font-size:12.8px;color:var(--suave);line-height:1.45;flex:1}
+button{font-family:inherit;font-size:13.5px;font-weight:600;border-radius:10px;padding:9px 14px;cursor:pointer;border:1px solid var(--borda);background:#fff;color:var(--roxoEsc)}
+button:hover{background:var(--cinzaF)}
+button.pri{background:var(--roxo);border-color:var(--roxo);color:#fff}
+button.pri:hover{background:var(--roxo2)}
+button.parar{background:var(--er);border-color:var(--er);color:#fff}
+button:disabled{opacity:.6;cursor:default}
+.rot button{margin-top:8px}
+.ativ{background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:6px 16px}
+.ativ .it{display:flex;gap:14px;padding:8px 0;border-bottom:1px solid var(--cinzaF);font-size:13px}
+.ativ .it:last-child{border-bottom:0}
+.ativ .h{color:var(--suave);font-variant-numeric:tabular-nums;min-width:62px}
+.vazio{color:var(--suave);font-size:13px;padding:10px 0}
+footer{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:22px;color:var(--suave);font-size:12.5px}
+footer .esp{flex:1}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--navy);color:#fff;padding:11px 18px;border-radius:10px;font-size:13.5px;display:none;max-width:80%;z-index:20}
+.fundoModal{position:fixed;inset:0;background:#1b1f4880;display:none;align-items:center;justify-content:center;z-index:30}
+.modal{background:#fff;border-radius:14px;padding:20px 22px;max-width:460px;box-shadow:0 10px 40px #0004}
+.modal p{margin:0 0 16px;line-height:1.5}
+.modal .bts{display:flex;gap:8px;justify-content:flex-end}
+.desligado{display:none;text-align:center;padding:80px 20px;color:var(--suave)}
+.abas{display:flex;gap:4px;margin:-4px 0 16px;border-bottom:1px solid var(--borda)}
+.aba{background:none;border:0;border-bottom:3px solid transparent;border-radius:0;padding:10px 16px;color:var(--suave);font-size:14px}
+.aba:hover{background:none;color:var(--roxoEsc)}
+.aba.on{color:var(--roxoEsc);border-bottom-color:var(--roxo)}
+.vista{display:none}.vista.on{display:block}
+.filtros{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:12px 14px;margin-bottom:12px}
+.filtros input,.filtros select{font-family:inherit;font-size:13.5px;padding:8px 10px;border:1px solid var(--borda);border-radius:9px;background:#fff;color:var(--txt)}
+.filtros input[type=search]{flex:1;min-width:220px}
+.filtros label{font-size:12.5px;color:var(--suave)}
+.tabela{background:var(--card);border:1px solid var(--borda);border-radius:14px;overflow:hidden}
+.tabela table{width:100%;border-collapse:collapse;font-size:13px}
+.tabela th{text-align:left;font-size:12px;color:var(--suave);font-weight:600;background:#FAF9FD;padding:9px 10px;border-bottom:1px solid var(--borda);position:sticky;top:0}
+.tabela td{padding:8px 10px;border-bottom:1px solid var(--cinzaF);vertical-align:top;overflow-wrap:break-word}
+.tabela td.nw{white-space:nowrap}
+.tabela tr:last-child td{border-bottom:0}
+.tabela td.n,.tabela th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tabela .rol{max-height:560px;overflow:auto}
+.lk{background:none;border:0;padding:0;color:var(--roxo);font-weight:600;text-decoration:underline;font-size:13px}
+.lk:hover{background:none;color:var(--roxo2)}
+.mut{color:var(--suave)}.okc{color:var(--ok)}.avc{color:var(--av)}
+.prod{font-size:12.5px;line-height:1.5}
+.resumo{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--suave);margin:2px 2px 10px}
+.resumo b{color:var(--roxoEsc);font-size:15px}
+.rec{background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:14px 16px;margin-bottom:12px}
+.rec textarea{width:100%;min-height:90px;font-family:inherit;font-size:12.5px;border:1px solid var(--borda);border-radius:9px;padding:8px 10px;resize:vertical}
+.rec .lin{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.acoes3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:10px 0}
+.acoes3 .met .v{font-size:24px}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.tag.c{background:var(--erF);color:var(--er)}.tag.ok{background:var(--okF);color:var(--ok)}.tag.e{background:var(--avF);color:var(--av)}.tag.n{background:var(--cinzaF);color:var(--suave)}
+@media (max-width:860px){.metricas{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<header>
+  <img src="/logos/central-96.png" srcset="/logos/central-96.png 1x, /logos/central-192.png 2x" alt="" onerror="this.style.display='none'">
+  <div><div class="t1">Central Hubii</div><div class="t2" id="sub">Pet Fun</div></div>
+  <div class="relogio"><b id="hora">--:--</b><div class="t2" id="data"></div></div>
+</header>
+<main id="tela">
+  <div class="abas"><button class="aba on" data-v="vHoje">Hoje</button><button class="aba" data-v="vPend">Pendências</button><button class="aba" data-v="vHist">Histórico de pedidos</button><button class="aba" data-v="vCompra">Compra contínua</button><button class="aba" data-v="vAjuda">Ajuda e backup</button></div>
+  <div class="chips" id="chips"></div>
+  <div class="alertas" id="alertas"></div>
+<section class="vista on" id="vHoje">
+
+  <div class="metricas">
+    <div class="met"><div class="r">Descritivos hoje</div><div class="v" id="mDesc">–</div><div class="s" id="sDesc"></div></div>
+    <div class="met"><div class="r">Etiquetas hoje</div><div class="v" id="mEtq">–</div><div class="s" id="sEtq"></div></div>
+    <div class="met"><div class="r">Conferência de despacho</div><div class="v" id="mConf">–</div><div class="s" id="sConf"></div><div class="barra"><div id="bConf" style="width:0"></div></div></div>
+    <div class="met"><div class="r">Pendências Hubii</div><div class="v" id="mPend">–</div><div class="s" id="sPend"></div></div>
+  </div>
+
+  <div class="andamento" id="andamento">
+    <div class="lin">
+      <span class="pulso"></span>
+      <div style="flex:1"><div class="tit" id="aTit"></div><div class="det" id="aDet"></div></div>
+      <button class="parar" id="bParar">Parar</button>
+    </div>
+    <div class="barra" style="margin-top:12px"><div id="aBarra" style="width:0"></div></div>
+  </div>
+
+  <h2>Impressão</h2>
+  <div class="grade" id="gImp"></div>
+
+  <h2>Atividade recente</h2>
+  <div class="ativ" id="ativ"><div class="vazio">Sem atividade ainda.</div></div>
+</section>
+
+<section class="vista" id="vHist">
+  <div class="filtros">
+    <input type="search" id="hBusca" placeholder="Pedido, EAN, código BR ou nome do produto">
+    <label>Período <select id="hPer"><option value="1">Hoje</option><option value="7" selected>Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="0">Tudo</option></select></label>
+    <button id="hAtu">Atualizar</button>
+    <button id="hXlsx">Baixar planilha</button>
+  </div>
+  <div class="resumo" id="hRes"></div>
+  <div class="tabela"><div class="rol"><table><thead><tr><th>Pedido</th><th>Dia</th><th>Descritivo</th><th>Etiqueta</th><th>Conferido</th><th>Código BR</th><th>Produtos</th></tr></thead><tbody id="hCorpo"></tbody></table></div></div>
+</section>
+
+<section class="vista" id="vCompra">
+  <div class="filtros">
+    <label>Período <select id="cPer"><option value="semana" selected>Esta semana (segunda até hoje)</option><option value="passada">Semana passada</option><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="pers">Escolher datas</option></select></label>
+    <span id="cDatas" style="display:none"><label>de <input type="date" id="cDe"></label> <label>até <input type="date" id="cAte"></label></span>
+    <input type="search" id="cBusca" placeholder="Filtrar por nome, marca ou EAN" style="min-width:200px">
+    <label>Mostrar <select id="cAcao"><option value="">Tudo</option><option value="Comprar (ruptura)">Só o que preciso comprar</option><option value="Verificar ERP">Só verificar no ERP</option><option value="Não trabalha">Só não trabalha</option><option value="cruz">Só o que saiu e teve recusa</option></select></label>
+    <button id="cAtu">Atualizar</button>
+    <button class="pri" id="cXlsx">Baixar planilha da compra</button>
+  </div>
+  <div class="rec">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><b>Recusas do Hubii</b><span class="mut" id="rInfo" style="font-size:12.5px">Cole aqui o relatório de recusas copiado do painel do Hubii.</span></div>
+    <textarea id="rTxt" placeholder="Produto	EAN	Marca	Motivo	Qtd. recusada	Valor total	Participação na perda"></textarea>
+    <div class="lin"><button class="pri" id="rCruzar">Cruzar recusas com as saídas</button><button id="rLimpar">Limpar recusas</button><span class="mut" id="rMsg" style="font-size:12.5px"></span></div>
+    <div id="rResumo"></div>
+  </div>
+  <div class="resumo" id="cRes"></div>
+  <h2 style="margin-top:6px">Saída por produto</h2>
+  <div class="tabela"><div class="rol"><table><thead><tr><th>Produto</th><th>EAN</th><th class="n">Unidades</th><th class="n">Pedidos</th><th class="n">Média por pedido</th><th>Última saída</th><th>Recusa no Hubii</th></tr></thead><tbody id="cCorpo"></tbody></table></div></div>
+  <div id="rBloco" style="display:none">
+    <h2>Recusas e o que fazer</h2>
+    <div class="tabela"><div class="rol"><table><thead><tr><th>Produto</th><th>EAN</th><th>Motivo (Hubii)</th><th>Ação sugerida</th><th class="n">Qtd. recusada</th><th class="n">Valor perdido</th><th class="n">% da perda</th><th class="n">Saiu no período</th></tr></thead><tbody id="rCorpo"></tbody></table></div></div>
+  </div>
+  <p class="mut" style="font-size:12.5px;margin-top:10px">Conta os pedidos pelo dia do descritivo (ou da etiqueta ou da reimpressão, se o descritivo foi impresso antes da Central 2.12 ou fora dela). Pedidos só lidos, sem impressão, não entram. Os produtos são lidos da tela do pedido no Hubii na hora da impressão. Ação sugerida: qualquer recusa com ruptura ou quantidade insuficiente vai para "Comprar"; só "Recusado no ERP" vai para "Verificar ERP"; "Não trabalho com este produto" (sem ruptura) vai para "Não trabalha".</p>
+</section>
+
+
+<section class="vista" id="vPend">
+  <h2 style="margin-top:4px">Rotinas</h2>
+  <div class="grade" id="gPend"></div>
+  <h2>Resultado da verificação</h2>
+  <div class="alertas" id="pAvisos"></div>
+  <div class="acoes3" id="pCartoes"></div>
+  <div class="filtros">
+    <input type="search" id="pBusca" placeholder="Cliente, código, pedido ou observação">
+    <label>Mostrar <select id="pDest"><option value="">Todas</option><option value="Cancelar" selected>Só cancelar</option><option value="Dar baixa">Só dar baixa</option><option value="Aguardar/conferir">Só aguardar/conferir</option></select></label>
+    <label style="cursor:pointer"><input type="checkbox" id="pFeitos"> mostrar as já feitas</label>
+    <button id="pCopiar" class="pri">Copiar códigos</button>
+    <button id="pXlsx">Baixar planilha</button>
+    <button id="pAtu">Atualizar</button>
+  </div>
+  <div class="resumo" id="pRes"></div>
+  <div class="tabela"><div class="rol"><table><thead><tr><th>Feita</th><th>Código</th><th>Cliente</th><th class="n">Total</th><th>Pendência</th><th>No Painel Hubii</th><th>No OneHub</th><th>Ação</th><th class="n">Nota</th><th>Observação</th></tr></thead><tbody id="pCorpo"></tbody></table></div></div>
+  <p class="mut" style="font-size:12.5px;margin-top:10px">Os dados vêm da última "Verificar pendências (Painel)" e da última "Consultar OneHub" feitas no Chrome. A nota (0 a 10) e a ação são as mesmas da planilha de pendências. Marque "Feita" quando cancelar ou der baixa: a marca fica guardada neste painel e some da lista.</p>
+</section>
+
+<section class="vista" id="vAjuda">
+  <div class="grade" style="grid-template-columns:repeat(auto-fill,minmax(340px,1fr))">
+    <div class="rot">
+      <div class="nome">Como usar</div>
+      <div class="desc">
+        <p><b>Impressão.</b> "Imprimir descritivos" troca a impressora para a MP-4200 TH, abre o Chrome da Central no Hubii e fatura cada pedido só depois do seu Confirmar. "Imprimir etiquetas" troca para a Argox, liga o ajudante e imprime na mesma ordem dos descritivos, sem repetir. Ao terminar as etiquetas, feche a janela do ajudante (ou use "Voltar a MP-4200").</p>
+        <p><b>Reimprimir.</b> Se a impressora falhar no meio, use "Reimprimir descritivos": você marca só os que não saíram; nada é faturado.</p>
+        <p><b>Pendências.</b> "Coletar" abre o OnePet e coleta; "Verificar no Hubii e OneHub" abre os dois (botão roxo em cada página). O resultado aparece na aba Pendências.</p>
+        <p><b>Chrome da Central.</b> Descritivos, Etiquetas e Reimprimir usam um Chrome separado, só da Central. O seu Chrome normal nunca é fechado por eles. Coletar e Baixa pedem para fechar o Chrome normal antes (o painel pergunta).</p>
+        <p><b>Parar.</b> O botão Parar (na aba Hoje, durante uma rotina) termina o pedido atual e para; nada fica pela metade.</p>
+      </div>
+    </div>
+    <div class="rot">
+      <div class="nome">Antes de dar baixa</div>
+      <div class="desc">
+        <p>1. Extensão da Central instalada em chrome://extensions (só uma).</p>
+        <p>2. Rode "Coletar pendências" e a verificação antes.</p>
+        <p>3. Comece pelo Teste 1 com 2 ou 3 clientes, depois o Teste 2 com 1 cliente. Só então o modo Completo.</p>
+        <p><b>Finalizar venda não tem como desfazer.</b></p>
+      </div>
+    </div>
+    <div class="rot">
+      <div class="nome">Atualizar a Central</div>
+      <div class="desc">
+        <p>Versão instalada: <b id="atVer">–</b></p>
+        <p>Pela internet: clique em Buscar atualização. Se houver versão nova, aparece o que mudou e o botão para instalar. Quando o painel abre, ele confere sozinho e avisa na aba Hoje; nada é instalado sem você clicar.</p>
+        <p>Por arquivo: se receber um pacote (hubii-central-x.x.x.zip), use Instalar de um arquivo .zip, sem extrair.</p>
+        <p>Nos dois casos o painel guarda a versão atual, troca os arquivos, recarrega a extensão nos Chromes abertos e reinicia sozinho. Seus dados não são mexidos. Não instala com uma rotina rodando nem com o ajudante de etiquetas aberto.</p>
+      </div>
+      <div id="atOnline" class="mut" style="font-size:12.8px;white-space:pre-line;display:none;background:var(--cinzaF);border-radius:10px;padding:10px 12px"></div>
+      <button class="pri" id="atBuscar">Buscar atualização</button>
+      <button class="pri" id="atBaixar" style="display:none">Instalar a versão nova</button>
+      <input type="file" id="atArq" accept=".zip" style="display:none">
+      <button id="atInstalar">Instalar de um arquivo .zip</button>
+      <button id="atVoltar">Voltar à versão anterior</button>
+      <div class="mut" id="atMsg" style="font-size:12.5px;margin-top:6px"></div>
+    </div>
+    <div class="rot">
+      <div class="nome">Backup dos seus dados</div>
+      <div class="desc">
+        <p>Junta num arquivo só: o relatório de desempenho, as memórias da Central (descritivos, etiquetas, códigos BR), as pendências verificadas, o histórico de pedidos, as recusas coladas e as pendências marcadas como feitas.</p>
+        <p>Deixe o Chrome da Central e o seu Chrome abertos (com o Hubii ou o OnePet) para os dados dos dois entrarem. Guarde o arquivo num pendrive ou no e-mail.</p>
+      </div>
+      <button class="pri" id="bkFazer">Fazer backup</button>
+      <div class="mut" id="bkMsg" style="font-size:12.5px;margin-top:6px"></div>
+    </div>
+    <div class="rot">
+      <div class="nome">Restaurar um backup</div>
+      <div class="desc">
+        <p>Use em um computador novo ou se os dados sumirem. A restauração <b>só acrescenta o que estiver faltando</b>: nada do que já existe é apagado ou trocado.</p>
+        <p>Abra o Chrome da Central e o seu Chrome antes (com o Hubii ou o OnePet), escolha o arquivo e espere a confirmação de cada Chrome.</p>
+      </div>
+      <input type="file" id="rsArq" accept=".json" style="display:none">
+      <button id="rsEscolher">Escolher arquivo de backup</button>
+      <div class="mut" id="rsMsg" style="font-size:12.5px;margin-top:6px"></div>
+    </div>
+  </div>
+  <p class="mut" style="font-size:12.5px;margin-top:12px">A Central antiga continua na pasta como reserva: botão "Abrir a Central antiga", aqui embaixo, ou o arquivo Central-antiga.bat.</p>
+</section>
+  <footer>
+    <span id="rod"></span><span class="esp"></span>
+    <button id="bAntiga">Abrir a Central antiga</button>
+    <button id="bExt">Extensões do Chrome</button>
+    <button id="bDesl">Desligar painel</button>
+  </footer>
+</main>
+<div class="desligado" id="desligado"><h3>Painel desligado</h3><p>Para abrir de novo, use o atalho "Painel da Central" ou o Painel.bat.</p></div>
+<div class="toast" id="toast"></div>
+<div class="fundoModal" id="fm"><div class="modal"><p id="fmTxt"></p><div class="bts"><button id="fmNao">Cancelar</button><button class="pri" id="fmSim">Continuar</button></div></div></div>
+
+<script src="/ext/planilha.js"></script>
+<script>
+const IC = {
+  imp: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/></svg>',
+  tag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="8" cy="8" r="1.5"/></svg>',
+  re: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>',
+  mp: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>',
+  busca: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>',
+  lista: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>',
+  baixa: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>'
+};
+const ROT = {
+  gImp: [
+    { id: 'descritivos', ic: 'imp', nome: 'Imprimir descritivos', desc: 'Troca para a MP-4200 TH, abre o Hubii em Esperando NFe e fatura cada pedido depois do seu Confirmar.', bt: 'Imprimir descritivos', pri: true, modos: ['descritivos'] },
+    { id: 'etiquetas', ic: 'tag', nome: 'Imprimir etiquetas', desc: 'Troca para a Argox, liga o ajudante e imprime na mesma ordem dos descritivos. Nenhuma etiqueta sai repetida.', bt: 'Imprimir etiquetas', pri: true, modos: ['etiquetas', 'lerbr'] },
+    { id: 'reimprimir', ic: 're', nome: 'Reimprimir descritivos', desc: 'Para quando a impressora falhou no meio. Você marca os que não saíram; nada é faturado.', bt: 'Reimprimir', modos: ['reimprimir'] },
+    { id: 'voltarmp', ic: 'mp', nome: 'Voltar a MP-4200 como padrão', desc: 'Use depois das etiquetas, se a MP não voltou a ser a impressora padrão sozinha.', bt: 'Voltar a MP-4200', modos: [] }
+  ],
+  gPend: [
+    { id: 'coletar', ic: 'busca', nome: 'Coletar pendências', desc: 'Abre as Pendências do OnePet e já coleta nomes, valores, datas e links.', bt: 'Coletar', modos: [] },
+    { id: 'verificar', ic: 'lista', nome: 'Verificar no Hubii e OneHub', desc: 'Abre o Painel Hubii e o OneHub, cada um na sua janela, com o botão roxo da Central.', bt: 'Abrir Hubii e OneHub', modos: [] },
+    { id: 'baixa', ic: 'baixa', nome: 'Dar baixa nas pendências', desc: 'Abre as Pendências do OnePet com o painel Baixa Hubii. Comece pelo Teste 1.', bt: 'Abrir pendências', modos: [] }
+  ]
+};
+const $ = id => document.getElementById(id);
+const el = (tag, cls, txt) => { const x = document.createElement(tag); if (cls) x.className = cls; if (txt != null) x.textContent = txt; return x; };
+const hhmm = t => t ? new Date(t).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+const hojeIni = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); };
+
+function toast(m) { const t = $('toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = 'none', 4500); }
+function perguntar3(txt, b1, b2) { return new Promise(r => { const sim = $('fmSim'), nao = $('fmNao'); const extra = el('button', '', b2); sim.textContent = b1; nao.before(extra); $('fmTxt').textContent = txt; $('fm').style.display = 'flex'; const fim = v => { $('fm').style.display = 'none'; extra.remove(); sim.textContent = 'Continuar'; r(v); }; sim.onclick = () => fim(1); extra.onclick = () => fim(2); nao.onclick = () => fim(0); }); }
+function perguntar(txt) { return new Promise(r => { $('fmTxt').textContent = txt; $('fm').style.display = 'flex'; $('fmSim').onclick = () => { $('fm').style.display = 'none'; r(true); }; $('fmNao').onclick = () => { $('fm').style.display = 'none'; r(false); }; }); }
+
+async function acao(a, confirmado, extra) {
+  try {
+    const r = await fetch('/api/acao', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Central': '1' }, body: JSON.stringify(Object.assign({ acao: a, confirmado: !!confirmado }, extra || {})) });
+    const j = await r.json();
+    if (j.confirmar) {
+      if (j.alternativa) { const r = await perguntar3(j.confirmar, 'Fechar e reabrir', 'Abrir sem fechar'); if (r === 1) return acao(a, true, extra); if (r === 2) return acao(a, false, Object.assign({ semFechar: true }, extra || {})); return; }
+      if (await perguntar(j.confirmar)) return acao(a, true, extra); return;
+    }
+    toast(j.msg || (j.ok ? 'Feito.' : 'Não deu certo.'));
+    if (a === 'desligar') { $('tela').style.display = 'none'; $('desligado').style.display = 'block'; clearInterval(loop); }
+  } catch (e) { toast('O painel não respondeu. A janela preta do painel está aberta?'); }
+}
+
+const cartoes = {};
+for (const g in ROT) ROT[g].forEach(c => {
+  const d = el('div', 'rot');
+  const topo = el('div', 'topo'); const ic = el('div', 'ic'); ic.innerHTML = IC[c.ic]; const st = el('span', 'st', 'Pronto');
+  topo.append(ic, st);
+  const b = el('button', c.pri ? 'pri' : '', c.bt);
+  b.onclick = async () => { b.disabled = true; await acao(c.id); setTimeout(() => b.disabled = false, 2500); };
+  d.append(topo, el('div', 'nome', c.nome), el('div', 'desc', c.desc), b);
+  $(g).append(d); cartoes[c.id] = { st, c };
+});
+$('bParar').onclick = async () => { if (await perguntar('Parar a rotina? Ela termina o pedido atual e para; nada fica pela metade.')) acao('parar'); };
+$('bExt').onclick = () => acao('extensoes');
+$('bAntiga').onclick = () => acao('centralantiga');
+$('bDesl').onclick = async () => { if (await perguntar('Desligar o painel? As rotinas que já estão rodando no Chrome continuam.')) acao('desligar'); };
+
+function chip(txt, cls) { const c = el('span', 'chip ' + (cls || '')); c.append(el('i'), document.createTextNode(txt)); return c; }
+
+function desenhar(s) {
+  $('hora').textContent = s.hora.slice(0, 5);
+  $('data').textContent = s.data;
+  $('sub').textContent = 'Pet Fun · ' + s.pc;
+  const fs = (s.fontes || []).map(f => Object.assign({ idade: f.idade }, f.d || {}));
+  const vivas = fs.filter(f => f.idade < 75);
+  const deHoje = fs.filter(f => f.dia === s.data);
+  const paginas = vivas.flatMap(f => (f.paginas || []).map(p => Object.assign({ idade: f.idade }, p)));
+  const imp = s.impressoras || {}, pr = s.processos || {};
+
+  // status
+  const ch = $('chips'); ch.replaceChildren();
+  ch.append(vivas.length ? chip('Extensão conectada' + (vivas.length > 1 ? ' (' + vivas.length + ' Chromes)' : ''), 'ok') : chip('Extensão sem sinal', 'er'));
+  ch.append(imp.mp === 'ok' ? chip('MP-4200 TH pronta', 'ok') : imp.mp === 'offline' ? chip('MP-4200 TH: Windows diz offline', 'av') : imp.mp === 'ausente' ? chip('MP-4200 TH não instalada', 'er') : chip('MP-4200 TH: sem informação'));
+  // A Argox costuma aparecer "offline" no Windows mesmo imprimindo normalmente: só avisa se ela não estiver instalada.
+  if (imp.argox === 'ok' || imp.argox === 'offline') ch.append(chip('Argox instalada', 'ok'));
+  else if (imp.argox === 'ausente') ch.append(chip('Argox não instalada', 'av'));
+  if (imp.padrao) ch.append(chip('Padrão: ' + imp.padrao.replace(' series PPLA', ''), /MP-4200/.test(imp.padrao) || pr.ajudante ? '' : 'av'));
+  if (pr.ajudante) ch.append(chip('Ajudante de etiquetas ligado', 'ok'));
+  ch.append(chip(pr.chromeCentral ? 'Chrome da Central aberto' : 'Chrome da Central fechado', pr.chromeCentral ? 'ok' : ''));
+
+  // alertas
+  const al = $('alertas'); al.replaceChildren();
+  const avisa = (t, cls) => al.append(el('div', 'alerta ' + cls, t));
+  if (!vivas.length) avisa('A extensão não deu sinal no último minuto. Os números do dia ficam parados até o Chrome da Central (ou o seu Chrome) estar aberto com a extensão ligada.', 'av');
+  const versoes = [...new Set(vivas.map(f => f.versao))];
+  if (s.versaoPasta && versoes.some(v => v && v !== s.versaoPasta)) avisa('A extensão carregada no Chrome é a ' + versoes.join(', ') + ', mas a pasta da Central tem a ' + s.versaoPasta + '. Abra "Extensões do Chrome" e clique em recarregar na Central Hubii.', 'av');
+  if (ONLINE && ONLINE.ok && ONLINE.temNova && ONLINE.nova !== s.versaoPasta) {
+    const a = el('div', 'alerta ok', 'Tem versão nova da Central na internet: ' + ONLINE.nova + ' (instalada: ' + (s.versaoPasta || '?') + '). ');
+    const b = el('button', 'pri', 'Ver o que mudou e instalar'); b.style.marginLeft = '8px';
+    b.onclick = () => { document.querySelector('.aba[data-v="vAjuda"]').click(); mostrarOnline(ONLINE); $('atOnline').scrollIntoView({ behavior: 'smooth', block: 'center' }); };
+    a.append(b); al.append(a);
+  }
+  if (imp.mp === 'offline') avisa('O Windows diz que a MP-4200 TH está offline. Se ela estiver imprimindo normalmente, pode ignorar; senão, confira o cabo e se ela está ligada.', 'av');
+  if (imp.padrao && !/MP-4200/.test(imp.padrao) && !pr.ajudante) avisa('A impressora padrão está em "' + imp.padrao + '" e o ajudante de etiquetas está desligado. Se já terminou as etiquetas, use "Voltar a MP-4200 como padrão".', 'av');
+
+  // números do dia
+  const soma = k => Math.max(0, ...deHoje.map(f => (f.hoje && f.hoje[k] && f.hoje[k].n) || 0));
+  const ult = k => Math.max(0, ...deHoje.map(f => (f.hoje && f.hoje[k] && f.hoje[k].ult) || 0));
+  const rot = paginas.map(p => p.rotina).find(r => r && r.rodando) || null;
+  let nDesc = soma('descritivos'); if (rot && rot.modo === 'descritivos' && rot.n) nDesc += rot.n;
+  let nEtq = soma('etiquetas');
+  $('mDesc').textContent = nDesc; $('sDesc').textContent = ult('descritivos') ? 'último às ' + hhmm(ult('descritivos')) : (nDesc ? '' : 'nenhum ainda');
+  $('mEtq').textContent = nEtq; $('sEtq').textContent = ult('etiquetas') ? 'última às ' + hhmm(ult('etiquetas')) : (nEtq ? '' : 'nenhuma ainda');
+  const confs = paginas.map(p => p.conf).filter(c => c && c.t0 >= hojeIni()).sort((a, b) => b.t0 - a.t0);
+  if (confs.length) {
+    const c = confs[0], falt = Math.max(0, c.total - c.conf);
+    $('mConf').textContent = c.conf + ' de ' + c.total;
+    const sc = $('sConf'); sc.textContent = falt ? 'faltam ' + falt + ' (início às ' + hhmm(c.t0) + ')' : 'tudo conferido'; sc.className = 's ' + (falt ? 'av' : 'ok');
+    $('bConf').style.width = (c.total ? Math.round(100 * c.conf / c.total) : 0) + '%';
+  } else { $('mConf').textContent = '–'; $('sConf').textContent = vivas.length ? 'sem conferência hoje' : 'abra o Hubii para ver'; $('sConf').className = 's'; $('bConf').style.width = '0'; }
+  const pend = fs.map(f => f.pend).filter(p => p && p.t).sort((a, b) => b.t - a.t)[0];
+  if (pend) { $('mPend').textContent = pend.n; const sp = $('sPend'); const velho = pend.t < hojeIni(); sp.textContent = 'coleta de ' + (velho ? new Date(pend.t).toLocaleDateString('pt-BR') + ' ' : '') + hhmm(pend.t); sp.className = 's ' + (velho ? 'av' : ''); }
+  else { $('mPend').textContent = '–'; $('sPend').textContent = 'nenhuma coleta registrada'; }
+
+  // rotina em andamento
+  if (rot) {
+    $('andamento').style.display = 'block';
+    $('aTit').textContent = (rot.titulo || 'Rotina rodando') + (rot.total ? ' · ' + rot.n + ' de ' + rot.total : '');
+    $('aDet').textContent = rot.atual ? 'Agora: ' + rot.atual : 'Trabalhando no Hubii...';
+    $('aBarra').style.width = (rot.total ? Math.round(100 * rot.n / rot.total) : 5) + '%';
+  } else $('andamento').style.display = 'none';
+  for (const id in cartoes) {
+    const { st, c } = cartoes[id];
+    if (rot && c.modos.includes(rot.modo)) { st.textContent = 'Rodando'; st.className = 'st run'; }
+    else if (id === 'etiquetas' && pr.ajudante) { st.textContent = 'Ajudante ligado'; st.className = 'st ok'; }
+    else { st.textContent = 'Pronto'; st.className = 'st'; }
+  }
+
+  // atividade
+  const logs = paginas.flatMap(p => p.log || []).filter(x => x && x.t).sort((a, b) => b.t - a.t);
+  const vistos = new Set(); const at = $('ativ'); at.replaceChildren();
+  logs.filter(x => { const k = x.t + x.m; if (vistos.has(k)) return false; vistos.add(k); return true; }).slice(0, 8).forEach(x => {
+    const it = el('div', 'it'); it.append(el('span', 'h', hhmm(x.t)), el('span', '', x.m)); at.append(it);
+  });
+  if (!at.children.length) at.append(el('div', 'vazio', vivas.length ? 'Sem atividade recente no Hubii.' : 'A atividade aparece quando o Hubii estiver aberto com a extensão.'));
+
+  $('rod').textContent = 'Central ' + (s.versaoPasta || '') + ' · atualizado às ' + s.hora;
+}
+
+// ---------- abas
+let vista = 'vHoje';
+document.querySelectorAll('.aba').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.aba').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.vista').forEach(x => x.classList.toggle('on', x.id === b.dataset.v));
+  vista = b.dataset.v;
+  if (vista === 'vHist' || vista === 'vCompra') carregarHist().then(() => vista === 'vHist' ? mostrarHist() : mostrarCompra());
+  if (vista === 'vPend') carregarPend().then(mostrarPend);
+});
+
+// ---------- histórico (arquivo do computador, juntando os Chromes)
+let HIST = [], histT = 0;
+const dataDe = t => t ? new Date(t).toLocaleDateString('pt-BR') : '';
+const diaHora = t => t ? new Date(t).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+const tSaida = r => r.desc || r.etq || r.reimp || 0;
+const baseT = r => r.desc || r.etq || r.reimp || r.conf || r.u || 0;
+async function carregarHist(forcar) {
+  if (!forcar && Date.now() - histT < 15000) return;
+  try {
+    const txt = await (await fetch('/api/historico', { cache: 'no-store' })).text();
+    const m = new Map();
+    txt.split('\n').forEach(l => {
+      if (!l || l[0] !== '{') return; let r; try { r = JSON.parse(l); } catch (e) { return; }
+      if (!r || !r.id) return; const a = m.get(r.id) || { id: r.id };
+      if (Array.isArray(r.itens) && r.itens.length && (!a.itens || r.itens.length > a.itens.length || a.itens.some(x => x.q == null))) a.itens = r.itens;
+      ['desc', 'etq'].forEach(k => { if (r[k] && (!a[k] || r[k] < a[k])) a[k] = r[k]; });
+      ['reimp', 'conf', 'u'].forEach(k => { if (r[k] && (!a[k] || r[k] > a[k])) a[k] = r[k]; });
+      if (r.br) a.br = r.br;
+      m.set(r.id, a);
+    });
+    HIST = [...m.values()].sort((a, b) => baseT(b) - baseT(a)); histT = Date.now();
+  } catch (e) { toast('Não consegui ler o histórico.'); }
+}
+const norm = x => String(x || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const inicioDias = n => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (n - 1)); return d.getTime(); };
+function filtrarHist() {
+  const n = +$('hPer').value, q = norm($('hBusca').value.trim()), de = n ? inicioDias(n) : 0;
+  return HIST.filter(r => baseT(r) >= de && (!q || norm(r.id).includes(q) || norm(r.br).includes(q) || (r.itens || []).some(i => i.e.includes(q) || norm(i.n).includes(q))));
+}
+function mostrarHist() {
+  const L = filtrarHist(), corpo = $('hCorpo'); corpo.replaceChildren();
+  const comProd = L.filter(r => r.itens && r.itens.length).length;
+  $('hRes').replaceChildren(...[['Pedidos', L.length], ['Com descritivo', L.filter(r => r.desc || r.reimp).length], ['Com etiqueta', L.filter(r => r.etq).length], ['Conferidos', L.filter(r => r.conf).length], ['Com produtos lidos', comProd]].map(([a, b]) => { const x = el('span'); x.append(el('b', '', b), document.createTextNode(' ' + a.toLowerCase())); return x; }));
+  if (!L.length) { const tr = el('tr'); const td = el('td', 'mut', HIST.length ? 'Nenhum pedido com esse filtro.' : 'O histórico começa a ser montado a partir dos próximos descritivos, etiquetas e conferências feitos com a Central 2.12 ou mais nova.'); td.colSpan = 7; tr.append(td); corpo.append(tr); return; }
+  L.slice(0, 400).forEach(r => {
+    const tr = el('tr');
+    const tdP = el('td'); const b = el('button', 'lk', r.id); b.title = 'Abrir no Hubii'; b.onclick = () => acao('abrirpedido', false, { id: r.id }); tdP.append(b);
+    const prods = el('td', 'prod'); (r.itens || []).forEach(i => prods.append(el('div', '', (i.q != null ? i.q + 'x ' : '') + (i.n || 'EAN ' + i.e)))); if (!(r.itens || []).length) prods.append(el('span', 'mut', 'não lidos'));
+    tr.append(tdP, el('td', '', dataDe(baseT(r))), el('td', (r.desc || r.reimp) ? '' : 'mut', r.desc ? hhmm(r.desc) + (r.reimp ? ' (reimpresso ' + hhmm(r.reimp) + ')' : '') : (r.reimp ? 'reimpresso ' + hhmm(r.reimp) : '—')), el('td', r.etq ? '' : 'mut', r.etq ? hhmm(r.etq) : '—'), el('td', r.conf ? 'okc' : 'mut', r.conf ? diaHora(r.conf) : '—'), el('td', 'mut', r.br || '—'), prods);
+    corpo.append(tr);
+  });
+  if (L.length > 400) { const tr = el('tr'); const td = el('td', 'mut', 'Mostrando os 400 mais recentes de ' + L.length + '. Use a busca ou baixe a planilha para ver todos.'); td.colSpan = 7; tr.append(td); corpo.append(tr); }
+}
+['hBusca', 'hPer'].forEach(i => $(i).addEventListener('input', mostrarHist));
+$('hAtu').onclick = async () => { await carregarHist(true); mostrarHist(); };
+
+// ---------- compra contínua: soma por produto no período
+const ymdInput = t => { const d = new Date(t); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+function periodoCompra() {
+  const v = $('cPer').value, hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  const seg = new Date(hoje); seg.setDate(seg.getDate() - ((seg.getDay() + 6) % 7));
+  if (v === 'semana') return [seg.getTime(), Date.now()];
+  if (v === 'passada') { const a = new Date(seg); a.setDate(a.getDate() - 7); return [a.getTime(), seg.getTime() - 1]; }
+  if (v === 'pers') { const de = $('cDe').value ? new Date($('cDe').value + 'T00:00:00').getTime() : seg.getTime(); const ate = $('cAte').value ? new Date($('cAte').value + 'T23:59:59').getTime() : Date.now(); return [de, ate]; }
+  return [inicioDias(+v), Date.now()];
+}
+function somarCompra() {
+  const [de, ate] = periodoCompra(), q = norm($('cBusca').value.trim());
+  const peds = HIST.filter(r => { const t = tSaida(r); return t && t >= de && t <= ate; });
+  const P = new Map(); let semProd = 0;
+  peds.forEach(r => {
+    if (!(r.itens || []).length) { semProd++; return; }
+    r.itens.forEach(i => {
+      const a = P.get(i.e) || { e: i.e, n: '', un: 0, peds: new Set(), ult: 0, semQtd: false };
+      if (i.n && i.n.length > a.n.length) a.n = i.n;
+      if (i.q != null) a.un += i.q; else { a.un += 1; a.semQtd = true; }
+      a.peds.add(r.id); a.ult = Math.max(a.ult, tSaida(r)); P.set(i.e, a);
+    });
+  });
+  const fa = $('cAcao').value, rp = recPorEan();
+  const lista = [...P.values()].filter(a => (!q || a.e.includes(q) || norm(a.n).includes(q)) && (!fa || (rp.has(a.e) && (fa === 'cruz' || rp.get(a.e).acao === fa)))).sort((a, b) => b.un - a.un || b.peds.size - a.peds.size);
+  return { de, ate, peds, semProd, lista };
+}
+function mostrarCompra() {
+  const R = somarCompra(), corpo = $('cCorpo'); corpo.replaceChildren();
+  const un = R.lista.reduce((s, a) => s + a.un, 0);
+  const itens = [['Pedidos no período', R.peds.length], ['Produtos diferentes', R.lista.length], ['Unidades', un]];
+  $('cRes').replaceChildren(...itens.map(([a, b]) => { const x = el('span'); x.append(el('b', '', b), document.createTextNode(' ' + a.toLowerCase())); return x; }), el('span', '', dataDe(R.de) + ' a ' + dataDe(R.ate)));
+  if (R.semProd) $('cRes').append(el('span', 'avc', R.semProd + ' pedido(s) sem produtos lidos (ficam de fora da soma)'));
+  if (!R.lista.length) { const tr = el('tr'); const td = el('td', 'mut', HIST.length ? ($('cAcao').value || $('cBusca').value ? 'Nenhum produto com esse filtro.' : 'Nenhum produto no período.') : 'Os produtos começam a ser registrados nos próximos descritivos feitos com a Central 2.12 ou mais nova.'); td.colSpan = 7; tr.append(td); corpo.append(tr); mostrarRecusas(R); return; }
+  R.lista.forEach(a => {
+    const tr = el('tr');
+    const rc = recPorEan().get(a.e); const tdR = el('td');
+    if (rc) { tdR.append(el('span', 'tag ' + rc.cls, rc.acao), document.createTextNode(' ' + rc.q + ' un.')); } else tdR.append(el('span', 'mut', '—'));
+    tr.append(el('td', '', a.n || '(sem nome)'), el('td', 'mut', a.e), el('td', 'n', a.un + (a.semQtd ? '*' : '')), el('td', 'n', a.peds.size), el('td', 'n', (a.un / a.peds.size).toFixed(1).replace('.', ',')), el('td', 'mut', diaHora(a.ult)), tdR);
+    corpo.append(tr);
+  });
+  mostrarRecusas(R);
+}
+
+// ---------- recusas do Hubii (colar o relatório do painel do Hubii)
+const K_REC = 'central_recusas';
+const lerRecGuardadas = () => { try { return JSON.parse(localStorage.getItem(K_REC) || 'null'); } catch (e) { return null; } };
+const reais = x => { let t = String(x || '').replace(/R\$|\s/g, ''); if (!t) return null; if (/,\d{1,2}$/.test(t)) t = t.replace(/\./g, '').replace(',', '.'); else t = t.replace(/[.,]/g, ''); const v = parseFloat(t); return isNaN(v) ? null : v; };
+const pctDe = x => { const m = String(x || '').match(/(\d+(?:[.,]\d+)?)\s*%/); return m ? parseFloat(m[1].replace(',', '.')) : null; };
+const acaoDe = m => { const t = norm(m); if (/ruptura|quantidade insuficiente/.test(t)) return { acao: 'Comprar (ruptura)', cls: 'c' }; if (/nao trabalho/.test(t)) return { acao: 'Não trabalha', cls: 'n' }; if (/erp/.test(t)) return { acao: 'Verificar ERP', cls: 'e' }; return { acao: 'Outro', cls: 'n' }; };
+function lerRecusas(txt) {
+  const porEan = new Map();
+  let ult = null;
+  String(txt || '').replace(/\r/g, '').split('\n').forEach(l => {
+    const c = l.split('\t').map(x => x.trim());
+    const iE = c.findIndex(x => /^\d{8,14}$/.test(x));
+    if (iE < 1) { const p = pctDe(l); if (p != null && ult && ult.pct == null && /^\s*[\d.,]+\s*%\s*$/.test(l)) ult.pct = p; return; }
+    const r = { n: c[0], e: c[iE], marca: c[iE + 1] || '', motivo: c[iE + 2] || '', q: parseInt(String(c[iE + 3] || '').replace(/\D/g, ''), 10) || 0, v: reais(c[iE + 4]), pct: pctDe(c[iE + 5]) };
+    const a = porEan.get(r.e);
+    if (a) { a.q += r.q; a.v = (a.v || 0) + (r.v || 0); if (r.motivo && !a.motivo.includes(r.motivo)) a.motivo += ', ' + r.motivo; ult = a; }
+    else { porEan.set(r.e, r); ult = r; }
+  });
+  return [...porEan.values()].map(r => Object.assign(r, acaoDe(r.motivo)));
+}
+let RECCACHE = null;
+const recPorEan = () => { if (!RECCACHE) { const g = lerRecGuardadas(); RECCACHE = new Map((g ? lerRecusas(g.txt) : []).map(r => [r.e, r])); } return RECCACHE; };
+const brl = v => v == null ? '' : 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: Number.isInteger(v) ? 0 : 2, maximumFractionDigits: 2 });
+function mostrarRecusas(R) {
+  const g = lerRecGuardadas(); const recs = [...recPorEan().values()];
+  $('rInfo').textContent = g ? 'Recusas coladas em ' + diaHora(g.t) + ' · ' + recs.length + ' produto(s)' : 'Cole aqui o relatório de recusas copiado do painel do Hubii.';
+  const box = $('rResumo'); box.replaceChildren();
+  if (!recs.length) { $('rBloco').style.display = 'none'; return; }
+  const saiu = new Map((R ? R.lista : []).map(a => [a.e, a.un]));
+  const grupos = ['Comprar (ruptura)', 'Verificar ERP', 'Não trabalha'].map(nome => { const l = recs.filter(r => r.acao === nome); return { nome, n: l.length, q: l.reduce((s, r) => s + r.q, 0), v: l.reduce((s, r) => s + (r.v || 0), 0) }; });
+  const grade = el('div', 'acoes3');
+  grupos.forEach(gr => { const m = el('div', 'met'); m.append(el('div', 'r', gr.nome), el('div', 'v', gr.n + (gr.n === 1 ? ' produto' : ' produtos')), el('div', 's', gr.q + ' un. recusadas · ' + brl(gr.v) + ' perdidos')); grade.append(m); });
+  box.append(grade);
+  $('rBloco').style.display = 'block';
+  const corpo = $('rCorpo'); corpo.replaceChildren();
+  const fa = $('cAcao').value, q = norm($('cBusca').value.trim());
+  recs.filter(r => (!fa || (fa === 'cruz' ? saiu.has(r.e) : r.acao === fa)) && (!q || r.e.includes(q) || norm(r.n).includes(q) || norm(r.marca).includes(q))).sort((a, b) => (b.v || 0) - (a.v || 0)).forEach(r => {
+    const tr = el('tr'); const tdA = el('td'); tdA.append(el('span', 'tag ' + r.cls, r.acao));
+    const s = saiu.get(r.e);
+    tr.append(el('td', '', r.n), el('td', 'mut', r.e), el('td', 'mut', r.motivo), tdA, el('td', 'n', r.q), el('td', 'n', brl(r.v)), el('td', 'n', r.pct != null ? r.pct.toFixed(1).replace('.', ',') + '%' : ''), el('td', 'n ' + (s ? 'okc' : 'mut'), s ? s + ' un.' : '—'));
+    corpo.append(tr);
+  });
+}
+$('rCruzar').onclick = () => {
+  const txt = $('rTxt').value; const l = lerRecusas(txt);
+  if (!l.length) { $('rMsg').textContent = 'Não reconheci nenhuma linha com EAN. Copie a tabela de recusas inteira do painel do Hubii e cole de novo.'; return; }
+  try { localStorage.setItem(K_REC, JSON.stringify({ t: Date.now(), txt })); } catch (e) {}
+  RECCACHE = null; $('rTxt').value = ''; $('rMsg').textContent = l.length + ' produto(s) recusado(s) lido(s).'; mostrarCompra();
+};
+$('rLimpar').onclick = () => { try { localStorage.removeItem(K_REC); } catch (e) {} RECCACHE = null; $('rMsg').textContent = 'Recusas apagadas.'; mostrarCompra(); };
+$('cPer').addEventListener('input', () => { $('cDatas').style.display = $('cPer').value === 'pers' ? '' : 'none'; mostrarCompra(); });
+['cDe', 'cAte', 'cBusca', 'cAcao'].forEach(i => $(i).addEventListener('input', mostrarCompra));
+$('cAtu').onclick = async () => { await carregarHist(true); mostrarCompra(); };
+{ const hoje = new Date(); $('cAte').value = ymdInput(hoje); hoje.setDate(hoje.getDate() - ((hoje.getDay() + 6) % 7)); $('cDe').value = ymdInput(hoje); }
+
+// ---------- planilhas (mesmo gerador de .xlsx da extensão)
+const zz = n => String(n).padStart(2, '0');
+const carimbo = () => { const d = new Date(); return zz(d.getDate()) + '-' + zz(d.getMonth() + 1) + '-' + zz(d.getHours()) + 'h' + zz(d.getMinutes()); };
+function planilhaPronta() { const P = window.__centralPlan; if (!P || !P.empacotar) { toast('O gerador de planilhas não carregou. Aperte F5.'); return null; } return P; }
+$('hXlsx').onclick = () => {
+  const P = planilhaPronta(); if (!P) return; const L = filtrarHist();
+  const est = P.novoEstilo(); const cab = est.get({ b: true, color: 'FFFFFFFF', fill: 'FF3A1F6D', borda: true, h: 'center' }); const c = est.get({ borda: true }); const w = est.get({ borda: true, wrap: true, v: 'top' });
+  const p = P.novaPlanilha('Histórico', 'FF5B3CC4'); p.larguras = [12, 11, 14, 14, 16, 18, 70]; p.congelar = [0, 1];
+  p.linhas.push(['Pedido', 'Dia', 'Descritivo', 'Etiqueta', 'Conferido', 'Código BR', 'Produtos'].map(t => P.cel(t, cab)));
+  L.forEach(r => p.linhas.push([P.cel(Number(r.id), c), P.cel(dataDe(baseT(r)), c), P.cel(r.desc ? hhmm(r.desc) : '', c), P.cel(r.etq ? hhmm(r.etq) : '', c), P.cel(r.conf ? diaHora(r.conf) : '', c), P.cel(r.br || '', c), P.cel((r.itens || []).map(i => (i.q != null ? i.q + 'x ' : '') + (i.n || i.e) + ' (' + i.e + ')').join('\n'), w)]));
+  const it = P.novaPlanilha('Produtos por pedido', 'FF16856A'); it.larguras = [12, 16, 70, 8, 11]; it.congelar = [0, 1];
+  it.linhas.push(['Pedido', 'EAN', 'Produto', 'Qtd.', 'Dia'].map(t => P.cel(t, cab)));
+  L.forEach(r => (r.itens || []).forEach(i => it.linhas.push([P.cel(Number(r.id), c), P.cel(i.e, c), P.cel(i.n, c), P.cel(i.q, c), P.cel(dataDe(baseT(r)), c)])));
+  P.baixar('Historico-pedidos-' + carimbo() + '.xlsx', P.empacotar({ planilhas: [p, it], est }));
+};
+$('cXlsx').onclick = () => {
+  const P = planilhaPronta(); if (!P) return; const R = somarCompra();
+  const est = P.novoEstilo(); const cab = est.get({ b: true, color: 'FFFFFFFF', fill: 'FF3A1F6D', borda: true, h: 'center' }); const c = est.get({ borda: true }); const nb = est.get({ borda: true, b: true });
+  const per = dataDe(R.de) + ' a ' + dataDe(R.ate);
+  const p = P.novaPlanilha('Saída por produto', 'FF5B3CC4'); p.larguras = [70, 16, 11, 10, 14, 16]; p.congelar = [0, 2];
+  p.linhas.push([P.cel('Saída de produtos ' + per + ' (' + R.peds.length + ' pedidos)', nb)]);
+  p.linhas.push(['Produto', 'EAN', 'Unidades', 'Pedidos', 'Média por pedido', 'Última saída'].map(t => P.cel(t, cab)));
+  R.lista.forEach(a => p.linhas.push([P.cel(a.n, c), P.cel(a.e, c), P.cel(a.un, c), P.cel(a.peds.size, c), P.cel(Math.round(10 * a.un / a.peds.size) / 10, c), P.cel(diaHora(a.ult), c)]));
+  const pd = P.novaPlanilha('Pedidos', 'FF16856A'); pd.larguras = [12, 16, 70, 8, 16]; pd.congelar = [0, 1];
+  pd.linhas.push(['Pedido', 'EAN', 'Produto', 'Qtd.', 'Descritivo'].map(t => P.cel(t, cab)));
+  R.peds.forEach(r => (r.itens || []).forEach(i => pd.linhas.push([P.cel(Number(r.id), c), P.cel(i.e, c), P.cel(i.n, c), P.cel(i.q, c), P.cel(diaHora(tSaida(r)), c)])));
+  if (R.semProd) R.peds.filter(r => !(r.itens || []).length).forEach(r => pd.linhas.push([P.cel(Number(r.id), c), P.cel('', c), P.cel('produtos não lidos', c), P.cel('', c), P.cel(diaHora(tSaida(r)), c)]));
+  const recs = [...recPorEan().values()]; const planilhas = [p, pd];
+  if (recs.length) {
+    const saiu = new Map(R.lista.map(a => [a.e, a.un])); const g = lerRecGuardadas();
+    const rs = P.novaPlanilha('Resumo', 'FF3A1F6D'); rs.larguras = [26, 12, 20, 20];
+    rs.linhas.push([P.cel('Recusas do Hubii (coladas em ' + diaHora(g && g.t) + ') por ação', cab), P.cel('Produtos', cab), P.cel('Unidades recusadas', cab), P.cel('Valor perdido (R$)', cab)]);
+    ['Comprar (ruptura)', 'Verificar ERP', 'Não trabalha'].forEach(nome => { const l = recs.filter(r => r.acao === nome); rs.linhas.push([P.cel(nome, c), P.cel(l.length, c), P.cel(l.reduce((s, r) => s + r.q, 0), c), P.cel(Math.round(l.reduce((s, r) => s + (r.v || 0), 0) * 100) / 100, c)]); });
+    rs.linhas.push([P.cel('Total', nb), P.cel(recs.length, nb), P.cel(recs.reduce((s, r) => s + r.q, 0), nb), P.cel(Math.round(recs.reduce((s, r) => s + (r.v || 0), 0) * 100) / 100, nb)]);
+    rs.linhas.push([]); rs.linhas.push([P.cel('Saída ' + per, nb), P.cel(R.peds.length + ' pedidos', c), P.cel(R.lista.reduce((s, a) => s + a.un, 0) + ' unidades', c), P.cel(R.lista.length + ' produtos', c)]);
+    const rc = P.novaPlanilha('Recusas', 'FFB3261E'); rc.larguras = [70, 16, 18, 36, 18, 12, 16, 10, 16]; rc.congelar = [0, 1];
+    rc.linhas.push(['Produto', 'EAN', 'Marca', 'Motivo (Hubii)', 'Ação sugerida', 'Qtd. recusada', 'Valor perdido (R$)', '% da perda', 'Saiu no período (un.)'].map(t => P.cel(t, cab)));
+    recs.filter(r => { const fa = $('cAcao').value; return !fa || (fa === 'cruz' ? saiu.has(r.e) : r.acao === fa); }).sort((a, b) => (b.v || 0) - (a.v || 0)).forEach(r => rc.linhas.push([P.cel(r.n, c), P.cel(r.e, c), P.cel(r.marca, c), P.cel(r.motivo, c), P.cel(r.acao, c), P.cel(r.q, c), P.cel(r.v, est.get({ borda: true, fmt: '#,##0.00' })), P.cel(r.pct != null ? r.pct / 100 : null, est.get({ borda: true, fmt: '0.0%' })), P.cel(saiu.get(r.e) || null, c)]));
+    planilhas.unshift(rs); planilhas.push(rc);
+  }
+  P.baixar('Compra-continua-' + carimbo() + '.xlsx', P.empacotar({ planilhas, est }));
+};
+
+
+// ---------- pendências: resultado da verificação (mesmo motor da planilha de pendências)
+let PEND = null;
+const K_FEITAS = 'central_pend_feitas';
+const feitasLer = () => { try { return JSON.parse(localStorage.getItem(K_FEITAS) || '{}'); } catch (e) { return {}; } };
+const feitasGravar = o => { const lim = Date.now() - 60 * 864e5; for (const k in o) if (o[k] < lim) delete o[k]; try { localStorage.setItem(K_FEITAS, JSON.stringify(o)); } catch (e) {} };
+async function carregarPend() {
+  const P = window.__centralPlan; if (!P || !P.motor) { PEND = { erro: 'O gerador de planilhas não carregou. Aperte F5.' }; return; }
+  try {
+    const todos = await (await fetch('/api/pend', { cache: 'no-store' })).json();
+    let hub = null, oh = null, opc = {};
+    Object.values(todos).forEach(f => {
+      if (f && f.hub && f.hub.csv && (!hub || f.hub.t > hub.t)) { hub = f.hub; opc = f.opc || {}; }
+      if (f && f.oh && f.oh.csv && (!oh || f.oh.t > oh.t)) oh = f.oh;
+    });
+    if (!hub) { PEND = { vazio: true, oh }; return; }
+    const ohOutroDia = oh && dataDe(oh.t) !== dataDe(hub.t);
+    const usarOh = oh && !ohOutroDia;
+    const dados = P.motor(P.parseCsv(hub.csv), usarOh ? P.parseCsv(oh.csv) : [], opc);
+    PEND = { hub, oh, usarOh, ohOutroDia, opc, dados };
+  } catch (e) { PEND = { erro: 'Não consegui ler as pendências: ' + e.message }; }
+}
+const DESTCLS = { 'Cancelar': 'c', 'Dar baixa': 'ok', 'Aguardar/conferir': 'e' };
+function filtrarPend() {
+  if (!PEND || !PEND.dados) return [];
+  const f = feitasLer(), dest = $('pDest').value, q = norm($('pBusca').value.trim()), mostrarFeitas = $('pFeitos').checked;
+  return PEND.dados.filter(d => (!dest || d.dest === dest) && (mostrarFeitas || !f[d.cod]) && (!q || [d.cod, d.cli, d.ped, d.poh, d.obs].some(x => norm(x).includes(q))));
+}
+function mostrarPend() {
+  const av = $('pAvisos'), cart = $('pCartoes'), corpo = $('pCorpo'); av.replaceChildren(); cart.replaceChildren(); corpo.replaceChildren(); $('pRes').replaceChildren();
+  const aviso = (t, c) => av.append(el('div', 'alerta ' + (c || 'av'), t));
+  if (!PEND) return;
+  if (PEND.erro) { aviso(PEND.erro, 'er'); return; }
+  if (PEND.vazio) { aviso('Ainda não há pendências verificadas. Rode "Coletar pendências" e depois "Verificar no Hubii e OneHub" (botão roxo da Central em cada página). O resultado aparece aqui sozinho.'); return; }
+  const velho = PEND.hub.t < hojeIni();
+  aviso('Painel Hubii verificado em ' + diaHora(PEND.hub.t) + ' (' + PEND.dados.length + ' pendências)' + (PEND.usarOh ? ' · OneHub consultado em ' + diaHora(PEND.oh.t) : PEND.oh ? '' : ' · OneHub não consultado') + '.', velho ? 'av' : 'ok');
+  if (velho) aviso('A verificação é de outro dia. Rode de novo antes de cancelar ou dar baixa.');
+  if (PEND.ohOutroDia) aviso('A consulta do OneHub é de ' + dataDe(PEND.oh.t) + ', outro dia que a do Painel: não foi usada. Rode "Consultar OneHub" de novo para completar.');
+  const f = feitasLer();
+  ['Cancelar', 'Dar baixa', 'Aguardar/conferir'].forEach(nome => {
+    const l = PEND.dados.filter(d => d.dest === nome), feitas = l.filter(d => f[d.cod]).length;
+    const m = el('div', 'met'); m.style.cursor = 'pointer'; m.onclick = () => { $('pDest').value = nome; mostrarPend(); };
+    m.append(el('div', 'r', nome), el('div', 'v', String(l.length - feitas)), el('div', 's', feitas ? feitas + ' já feita(s)' : (l.length ? 'nenhuma feita ainda' : '')));
+    cart.append(m);
+  });
+  const L = filtrarPend();
+  $('pRes').append(el('span', '', L.length + ' na lista'));
+  if (!L.length) { const tr = el('tr'); const td = el('td', 'mut', 'Nenhuma pendência com esse filtro.'); td.colSpan = 10; tr.append(td); corpo.append(tr); return; }
+  const pedLink = (n, st) => { const td = el('td'); if (n) { const b = el('button', 'lk', n); b.onclick = () => acao('abrirpedido', false, { id: n }); td.append(b); if (st) td.append(el('div', 'mut', st)); } else td.append(el('span', 'mut', st || '—')); return td; };
+  L.forEach(d => {
+    const tr = el('tr'); if (f[d.cod]) tr.style.opacity = '.55';
+    const tdF = el('td'); const ck = document.createElement('input'); ck.type = 'checkbox'; ck.checked = !!f[d.cod]; ck.title = 'Marcar como feita';
+    ck.onchange = () => { const o = feitasLer(); if (ck.checked) o[d.cod] = Date.now(); else delete o[d.cod]; feitasGravar(o); mostrarPend(); };
+    tdF.append(ck);
+    const tdA = el('td'); tdA.append(el('span', 'tag ' + (DESTCLS[d.dest] || 'n'), d.dest));
+    tr.append(tdF, el('td', 'nw', d.cod), el('td', '', d.cli), el('td', 'n', d.tot != null ? 'R$ ' + d.tot.toFixed(2).replace('.', ',') : ''), el('td', 'mut nw', d.dpend), pedLink(d.ped, d.st), pedLink(d.poh, d.stoh), tdA, el('td', 'n', String(d.conf)), el('td', 'prod', d.obs));
+    corpo.append(tr);
+  });
+}
+['pBusca', 'pDest', 'pFeitos'].forEach(i => $(i).addEventListener('input', mostrarPend));
+$('pAtu').onclick = async () => { await carregarPend(); mostrarPend(); toast('Pendências atualizadas.'); };
+$('pCopiar').onclick = async () => {
+  const cods = filtrarPend().filter(d => !feitasLer()[d.cod]).map(d => d.cod).filter(Boolean);
+  if (!cods.length) { toast('Nenhum código para copiar com esse filtro.'); return; }
+  try { await navigator.clipboard.writeText(cods.join('\n')); toast(cods.length + ' código(s) copiado(s). É só colar nas notas.'); }
+  catch (e) { toast('Não consegui copiar. Selecione a coluna Código e copie à mão.'); }
+};
+$('pXlsx').onclick = () => {
+  const P = planilhaPronta(); if (!P || !PEND || !PEND.dados) { toast('Ainda não há pendências verificadas.'); return; }
+  P.baixar('Painel-Hubii-OneHub-pendencias-' + carimbo() + '.xlsx', P.gerarXlsx(PEND.dados, dataDe(PEND.hub.t)));
+};
+
+// ---------- backup e restauração
+let ULT_ESTADO = null;
+const esperarAte = (f, seg) => new Promise(res => { const t0 = Date.now(); const v = async () => { const r = await f().catch(() => null); if (r || Date.now() - t0 > seg * 1000) res(r); else setTimeout(v, 2000); }; v(); });
+$('bkFazer').onclick = async () => {
+  const b = $('bkFazer'), m = $('bkMsg'); b.disabled = true;
+  try {
+    const vivas = ((ULT_ESTADO && ULT_ESTADO.fontes) || []).filter(f => f.idade < 75).length;
+    m.textContent = 'Pedindo os dados a ' + (vivas || 'cada') + ' Chrome(s) com a extensão... pode levar até 40 segundos.';
+    const r = await (await fetch('/api/acao', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Central': '1' }, body: JSON.stringify({ acao: 'backup' }) })).json();
+    if (!r.ok) throw new Error(r.msg || 'o painel recusou');
+    let partes = {};
+    await esperarAte(async () => { partes = await (await fetch('/api/backup-partes?id=' + r.id, { cache: 'no-store' })).json(); return Object.keys(partes).length >= Math.max(1, vivas); }, 45);
+    const nCh = Object.keys(partes).length;
+    if (!nCh && !confirm('Nenhum Chrome respondeu (a extensão não está aberta). Fazer o backup só com o histórico de pedidos e os dados deste painel?')) { m.textContent = 'Backup cancelado.'; return; }
+    const historico = await (await fetch('/api/historico', { cache: 'no-store' })).text();
+    const storages = {}; Object.keys(partes).forEach(k => { storages[k] = (partes[k] && partes[k].dados) || {}; });
+    const pacote = { app: 'central-hubii-backup', formato: 1, t: Date.now(), pc: ULT_ESTADO && ULT_ESTADO.pc, versao: ULT_ESTADO && ULT_ESTADO.versaoPasta, storages, historico, painel: { recusas: localStorage.getItem(K_REC), pendFeitas: localStorage.getItem(K_FEITAS) } };
+    const blob = new Blob([JSON.stringify(pacote)], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Backup-Central-Hubii-' + carimbo() + '.json'; document.body.append(a); a.click(); setTimeout(() => { a.remove(); URL.revokeObjectURL(a.href); }, 4000);
+    const ev = Object.values(storages).reduce((s, d) => s + Object.keys(d).filter(k => k.startsWith('ev_')).length, 0);
+    const nh = historico.split('\n').filter(x => x.startsWith('{')).length;
+    m.textContent = 'Backup salvo na pasta Downloads: ' + nCh + ' Chrome(s), ' + ev + ' registro(s) do relatório, ' + nh + ' linha(s) do histórico de pedidos.' + (vivas > nCh ? ' Atenção: ' + (vivas - nCh) + ' Chrome não respondeu a tempo; tente de novo com ele aberto no Hubii.' : '');
+  } catch (e) { m.textContent = 'Não deu certo: ' + e.message; }
+  finally { b.disabled = false; }
+};
+$('rsEscolher').onclick = () => $('rsArq').click();
+$('rsArq').onchange = async () => {
+  const f = $('rsArq').files[0], m = $('rsMsg'); $('rsArq').value = ''; if (!f) return;
+  let b; try { b = JSON.parse(await f.text()); } catch (e) { m.textContent = 'Esse arquivo não é um backup da Central.'; return; }
+  if (!b || b.app !== 'central-hubii-backup') { m.textContent = 'Esse arquivo não é um backup da Central.'; return; }
+  const nCh = Object.keys(b.storages || {}).length, nh = String(b.historico || '').split('\n').filter(x => x.startsWith('{')).length;
+  if (!await perguntar('Restaurar o backup de ' + diaHora(b.t) + (b.pc ? ' (computador ' + b.pc + ')' : '') + '? Ele tem dados de ' + nCh + ' Chrome(s) e ' + nh + ' linha(s) do histórico. Só o que estiver faltando será acrescentado; nada é apagado.')) return;
+  try {
+    m.textContent = 'Restaurando o histórico de pedidos...';
+    if (nh) await fetch('/api/restaurar-hist', { method: 'POST', headers: { 'Content-Type': 'text/plain', 'X-Central': '1' }, body: b.historico });
+    if (b.painel) { if (b.painel.recusas && !localStorage.getItem(K_REC)) localStorage.setItem(K_REC, b.painel.recusas); if (b.painel.pendFeitas) { const o = feitasLer(); let x = {}; try { x = JSON.parse(b.painel.pendFeitas) || {}; } catch (e) {} feitasGravar(Object.assign(x, o)); } }
+    RECCACHE = null; histT = 0;
+    if (!nCh) { m.textContent = 'Pronto: histórico e dados do painel restaurados.'; return; }
+    const vivas = ((ULT_ESTADO && ULT_ESTADO.fontes) || []).filter(x => x.idade < 75).length;
+    m.textContent = 'Histórico restaurado. Enviando os dados para ' + (vivas || 'os') + ' Chrome(s) aberto(s)... pode levar até 40 segundos.';
+    const r = await (await fetch('/api/restaurar', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Central': '1' }, body: JSON.stringify({ storages: b.storages }) })).json();
+    let st = {};
+    await esperarAte(async () => { st = (await (await fetch('/api/restaurar-status?id=' + r.id, { cache: 'no-store' })).json()).fontes || {}; return Object.keys(st).length >= Math.max(1, vivas); }, 60);
+    const ks = Object.keys(st);
+    m.textContent = ks.length ? 'Pronto: ' + ks.map((k, i) => 'Chrome ' + (i + 1) + ' recebeu ' + st[k] + ' item(ns) que faltavam').join('; ') + '. Recarregue a página do Hubii (F5) nos Chromes.' + (vivas > ks.length ? ' Um Chrome não respondeu: abra-o no Hubii e restaure de novo (não duplica nada).' : '') : 'O histórico foi restaurado, mas nenhum Chrome respondeu. Abra o Chrome da Central no Hubii e restaure de novo (não duplica nada).';
+  } catch (e) { m.textContent = 'Não deu certo: ' + e.message; }
+};
+
+// ---------- atualização pelo painel
+async function aposAtualizar(m, versao) {
+  m.textContent = 'Pronto: versão ' + versao + ' instalada. Reiniciando o painel...';
+  clearInterval(loop);
+  await new Promise(r => setTimeout(r, 2500));
+  const ok = await esperarAte(async () => { const e = await (await fetch('/api/estado', { cache: 'no-store' })).json(); return e && e.versaoPasta === versao; }, 60);
+  if (ok) location.reload(); else m.textContent = 'A versão ' + versao + ' foi instalada, mas o painel não voltou sozinho. Abra de novo pelo atalho "Central Hubii".';
+}
+$('atInstalar').onclick = () => $('atArq').click();
+$('atArq').onchange = async () => {
+  const f = $('atArq').files[0], m = $('atMsg'); $('atArq').value = ''; if (!f) return;
+  if (!/\.zip$/i.test(f.name)) { m.textContent = 'Escolha o arquivo .zip da Central (sem extrair).'; return; }
+  const corpo = await f.arrayBuffer();
+  const enviar = async conf => (await fetch('/api/atualizar' + (conf ? '?confirmado=1' : ''), { method: 'POST', headers: { 'Content-Type': 'application/zip', 'X-Central': '1' }, body: corpo })).json();
+  try {
+    m.textContent = 'Instalando ' + f.name + '...';
+    let r = await enviar(false);
+    if (r.confirmar) { if (!await perguntar(r.confirmar)) { m.textContent = 'Cancelado. Nada mudou.'; return; } r = await enviar(true); }
+    if (!r.ok) { m.textContent = r.msg || 'Não deu certo. Nada mudou.'; return; }
+    aposAtualizar(m, r.versao);
+  } catch (e) { m.textContent = 'Não deu certo: ' + e.message; }
+};
+$('atVoltar').onclick = async () => {
+  const m = $('atMsg');
+  const pede = async conf => (await fetch('/api/acao', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Central': '1' }, body: JSON.stringify({ acao: 'voltarversao', confirmado: conf }) })).json();
+  try {
+    let r = await pede(false);
+    if (r.confirmar) { if (!await perguntar(r.confirmar)) return; r = await pede(true); }
+    if (!r.ok) { m.textContent = r.msg; return; }
+    aposAtualizar(m, r.versao);
+  } catch (e) { m.textContent = 'Não deu certo: ' + e.message; }
+};
+
+// ---------- atualização pela internet
+let ONLINE = null;
+const mb = n => (n / 1048576).toFixed(1).replace('.', ',') + ' MB';
+function mostrarOnline(r) {
+  const box = $('atOnline'); box.style.display = 'block'; $('atBaixar').style.display = 'none';
+  if (!r.ok) { box.textContent = r.msg; return; }
+  if (!r.temNova) { box.textContent = 'Você já está na versão mais nova (' + r.atual + ').' + (r.data ? ' Última publicação: ' + r.data + '.' : ''); return; }
+  box.textContent = 'Versão nova: ' + r.nova + ' (instalada: ' + r.atual + ')' + (r.data ? ', publicada em ' + r.data : '') + (r.tamanho ? ', ' + mb(r.tamanho) : '') + '.' + (r.novidades ? '\n\nO que mudou:\n' + r.novidades : '');
+  $('atBaixar').style.display = '';
+}
+async function buscarOnline(forcar) {
+  try { ONLINE = await (await fetch('/api/online' + (forcar ? '?forcar=1' : ''), { cache: 'no-store' })).json(); } catch (e) { ONLINE = { ok: false, msg: 'O painel não respondeu.' }; }
+  return ONLINE;
+}
+$('atBuscar').onclick = async () => {
+  const b = $('atBuscar'); b.disabled = true; $('atOnline').style.display = 'block'; $('atOnline').textContent = 'Procurando versão nova...';
+  mostrarOnline(await buscarOnline(true)); b.disabled = false;
+};
+$('atBaixar').onclick = async () => {
+  const m = $('atMsg'), b = $('atBaixar');
+  const pede = async conf => (await fetch('/api/acao', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Central': '1' }, body: JSON.stringify({ acao: 'instalaronline', confirmado: conf }) })).json();
+  if (!await perguntar('Baixar e instalar a versão ' + (ONLINE && ONLINE.nova) + '? O painel guarda a versão atual (dá para voltar) e reinicia sozinho. Seus dados não são mexidos.')) return;
+  b.disabled = true;
+  try {
+    m.textContent = 'Baixando e conferindo o pacote... (pode levar até um minuto)';
+    let r = await pede(false);
+    if (r.confirmar) { if (!await perguntar(r.confirmar)) { m.textContent = 'Cancelado. Nada mudou.'; b.disabled = false; return; } r = await pede(true); }
+    if (!r.ok) { m.textContent = r.msg || 'Não deu certo. Nada mudou.'; b.disabled = false; return; }
+    aposAtualizar(m, r.versao);
+  } catch (e) { m.textContent = 'Não deu certo: ' + e.message; b.disabled = false; }
+};
+// confere ao abrir o painel (depois de 5 s, para não atrasar a tela) e a cada 6 horas
+setTimeout(() => buscarOnline(false), 5000);
+setInterval(() => buscarOnline(true), 6 * 3600 * 1000);
+
+async function atualizar() {
+  try { const r = await fetch('/api/estado', { cache: 'no-store' }); ULT_ESTADO = await r.json(); desenhar(ULT_ESTADO); $('atVer').textContent = ULT_ESTADO.versaoPasta || '–'; }
+  catch (e) { $('rod').textContent = 'Sem resposta do painel. A janela preta do painel foi fechada?'; }
+}
+atualizar();
+const loop = setInterval(atualizar, 2000);
+</script>
+</body>
+</html>

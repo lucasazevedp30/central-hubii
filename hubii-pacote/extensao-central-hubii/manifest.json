@@ -1,0 +1,90 @@
+{
+  "manifest_version": 3,
+  "name": "Central Hubii - Pet Fun",
+  "version": "2.16.1",
+  "description": "Impressão (descritivos e etiquetas com lista de conferência), pendências do Hubii/OneHub e baixa no OnePet.",
+  "permissions": [
+    "storage",
+    "alarms"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://hub.hubii.co/*"
+      ],
+      "js": [
+        "visual.js",
+        "registro.js",
+        "planilha.js",
+        "suporte.js",
+        "content.js",
+        "conferir.js",
+        "pend.js",
+        "painel-ponte.js"
+      ],
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://hub.hubii.co/*"
+      ],
+      "js": [
+        "hook-etiqueta.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://onehub.onepet.com.br/*"
+      ],
+      "js": [
+        "visual.js",
+        "registro.js",
+        "planilha.js",
+        "suporte.js",
+        "onehub.js",
+        "launcher-onehub.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://*.onepet.com.br/*"
+      ],
+      "exclude_matches": [
+        "https://onehub.onepet.com.br/*"
+      ],
+      "js": [
+        "visual.js",
+        "registro.js",
+        "planilha.js",
+        "suporte.js",
+        "baixa.js",
+        "coletar.js",
+        "launcher-onepet.js",
+        "painel-ponte.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://*.onepet.com.br/*"
+      ],
+      "exclude_matches": [
+        "https://onehub.onepet.com.br/*"
+      ],
+      "js": [
+        "hook-popup.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    }
+  ],
+  "host_permissions": [
+    "http://localhost:8765/*"
+  ]
+}

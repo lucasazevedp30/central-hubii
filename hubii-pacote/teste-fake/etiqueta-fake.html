@@ -1,0 +1,3 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Etiqueta FAKE (teste)</title></head>
+<body style="font-family:sans-serif;padding:30px"><h2>Etiqueta FAKE de teste</h2><p>Pedido <b id="p"></b>. Esta aba fecha sozinha em 4 segundos (nada é impresso).</p>
+<script>document.getElementById('p').textContent=new URLSearchParams(location.search).get('id');setTimeout(()=>window.close(),4000);</script></body></html>

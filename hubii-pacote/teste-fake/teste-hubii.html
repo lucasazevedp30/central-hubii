@@ -1,0 +1,67 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Hubii FAKE - página de teste</title>
+<style>
+body{font-family:Segoe UI,Arial,sans-serif;margin:0;background:#fff;color:#222}
+.faixa{background:#fff3cd;color:#664d03;padding:8px 16px;font-size:13px;border-bottom:1px solid #e6d28a}
+.faixa button{margin-left:10px;padding:3px 10px;cursor:pointer}
+.wrap{max-width:900px;margin:20px auto;padding:0 16px}
+.tab{padding:7px 14px;border:1px solid #ccc;background:#fff;border-radius:6px;cursor:pointer}.tab.on{background:#5b3fd0;color:#fff;border-color:#5b3fd0}
+.row{display:flex;min-height:52px;border-bottom:1px solid #e5e5e5;align-items:center;cursor:pointer}.row>div{width:200px}
+.hd{font-weight:600;cursor:default;color:#555}
+.badge{background:#f5a623;color:#fff;border-radius:10px;padding:3px 9px;font-size:12px;font-weight:600}.badge.e{background:#2f9e5b}
+#pan{position:absolute;right:30px;top:150px;width:270px;background:#fff;border:1px solid #bbb;border-radius:8px;padding:12px;display:none;box-shadow:0 4px 14px rgba(0,0,0,.2)}
+#pan label{display:block;margin:6px 0}
+button{font-size:14px}
+#pg button{margin:2px}
+#det button{margin:4px 6px 4px 0;padding:7px 14px}
+</style></head><body>
+<div class="faixa"><b>HUBII FAKE</b> — página de teste, nada aqui é real. Pedidos guardados neste navegador.
+<button onclick="reiniciar()">Reiniciar pedidos</button>
+Qtd: <input id="qtd" type="number" value="25" style="width:60px"> 
+<a href="?central=descritivos" style="margin-left:12px">Abrir como Descritivos</a> · <a href="?central=etiquetas">Abrir como Etiquetas</a></div>
+<div class="wrap">
+<h1>Pedidos</h1>
+<div><button class="tab" id="t1" onclick="aba('coleta')">Coleta 0</button> <button class="tab on" id="t2" onclick="aba('desp')">Despacho</button></div>
+<div style="text-align:right;margin:10px 0"><button onclick="var p=document.getElementById('pan');p.style.display=p.style.display=='block'?'none':'block'">Filtros</button></div>
+<div id="pan"><div style="font-weight:600">Filtros</div><div style="font-size:12px;color:#666">Configure os filtros para a tabela de pedidos</div><hr>
+<div>Status do pedido</div>
+<label><input type="checkbox" id="fnfe" onchange="pag=1;render()"><span>Esperando NFe do Hub</span></label>
+<label><input type="checkbox" id="fexp" onchange="pag=1;render()"><span>Esperando Expedição</span></label></div>
+<div id="lista"></div><div id="rod" style="margin-top:12px"></div><div id="det" style="display:none"></div>
+</div>
+<script>
+const KEY='fakehubii_pedidos';
+function gerar(n){const a=[];for(let i=0;i<n;i++){const id=String(1290000+i*7+1);
+ // a cada 5º pedido já está em Esperando Expedição (simula os impressos à mão / de outro lote)
+ a.push({id,st:i%5==4?'Esperando Expedição':'Esperando NFe do Hub'});}return a}
+let orders;try{orders=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+if(!orders||!orders.length){orders=gerar(25);localStorage.setItem(KEY,JSON.stringify(orders))}
+const save=()=>localStorage.setItem(KEY,JSON.stringify(orders));
+function reiniciar(){const n=parseInt(document.getElementById('qtd').value,10)||25;orders=gerar(n);save();
+ ['hubii_fila_etiquetas','hubii_etiquetas_historico','hubii_faturados'].forEach(k=>localStorage.removeItem(k));location.href=location.pathname}
+let pag=1,tab='desp';
+function aba(t){tab=t;document.getElementById('t1').className='tab'+(t=='coleta'?' on':'');document.getElementById('t2').className='tab'+(t=='desp'?' on':'');pag=1;render()}
+function filtered(){if(tab!='desp')return[];const a=document.getElementById('fnfe').checked,b=document.getElementById('fexp').checked;
+ return orders.filter(o=>(!a&&!b)||(a&&o.st=='Esperando NFe do Hub')||(b&&o.st=='Esperando Expedição'))}
+function render(){const f=filtered(),pp=10,tot=Math.max(1,Math.ceil(f.length/pp));if(pag>tot)pag=tot;const pg=f.slice((pag-1)*pp,pag*pp);
+ let h='<div class="row hd"><div>ID Pedido/Canal</div><div>Aceito em</div><div>Status</div></div>';
+ pg.forEach(o=>h+=`<div class="row" onclick="abrir('${o.id}')"><div><span style="color:#4a3fc0">${o.id}</span><br><small>26102DQ${o.id}</small></div><div>hoje, 13:00</div><div><span class="badge ${o.st=='Esperando Expedição'?'e':''}">${o.st}</span></div></div>`);
+ document.getElementById('lista').innerHTML=h;
+ let r=`<div>Mostrando ${f.length?(pag-1)*pp+1:0} a ${Math.min(pag*pp,f.length)} de ${f.length} pedidos</div><div id="pg">`;
+ for(let i=1;i<=tot;i++)r+=`<button onclick="pag=${i};render()">${i}</button>`;document.getElementById('rod').innerHTML=r+'</div>';
+ document.getElementById('t2').textContent='Despacho '+orders.length}
+let cur=null;
+function abrir(id){cur=orders.find(o=>o.id==id);lista.style.display='none';rod.style.display='none';det.style.display='block';
+ det.innerHTML=`<button id="bv" onclick="voltar()">Voltar</button><h3>Pedido #${id}</h3><div>Status: ${cur.st}</div>
+ <button id="bf" disabled>Faturar</button><button id="bd" disabled>Imprimir Descritivo</button><button id="be" disabled>Imprimir etiqueta</button>`;
+ const bf=det.querySelector('#bf'),bd=det.querySelector('#bd'),be=det.querySelector('#be');
+ // atrasos parecidos com o real: Faturar libera depois de ~2s
+ setTimeout(()=>{bf.disabled=cur.st!='Esperando NFe do Hub'},2000);
+ bd.disabled=false;bd.onclick=()=>{console.log('descritivo '+id)};
+ be.disabled=cur.st!='Esperando Expedição';
+ bf.onclick=()=>{bf.disabled=true;setTimeout(()=>{cur.st='Esperando Expedição';save();det.querySelector('div').textContent='Status: Esperando Expedição';be.disabled=false},1500)};
+ be.onclick=()=>{window.open('etiqueta-fake.html?id='+id,'_blank')}}
+function voltar(){det.style.display='none';lista.style.display='block';rod.style.display='block';render()}
+render();
+</script>
+<script src="../extensao-central-hubii/content.js"></script>
+</body></html>
