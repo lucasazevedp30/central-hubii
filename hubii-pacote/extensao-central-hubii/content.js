@@ -665,7 +665,7 @@ async function rodarLerBR() {
     for (let i = 0; i < falta.length && !parar; i++) {
       const id = falta[i];
       prog(lidos.length + semBR.length, falta.length, '#' + id, 'Ler códigos BR: lendo');
-      const alvo = await naLista(id);
+      const alvo = await acharPedido(id);
       if (!alvo) { semBR.push(id); log('#' + id + ' não está mais na lista; pulei.'); continue; }
       if (!await abrirPedido(id, alvo)) { log('Não consegui abrir #' + id + '. Parando.'); break; }
       await sleep(1500);
@@ -684,7 +684,7 @@ async function rodarLerBR() {
     }
   } catch (e) { console.error(e); log('Erro inesperado: ' + e.message); }
   avisarFechar(false);
-  rodando = false;
+  rodando = false; limparBusca();
   const restam = falta.filter(x => !lidos.includes(x) && !semBR.includes(x));
   const rel = 'Códigos BR lidos (' + lidos.length + '): ' + lidos.join(' ') + (semBR.length ? '\nNão consegui ler: ' + semBR.join(' ') : '') + (restam.length ? '\nFaltou rodar: ' + restam.join(' ') : '');
   const completo = !parar && !restam.length;
