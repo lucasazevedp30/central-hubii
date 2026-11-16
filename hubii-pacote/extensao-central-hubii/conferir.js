@@ -70,7 +70,7 @@ const abrir = () => {
       if (!D()) { msg.textContent = 'A Central não carregou por completo. Recarregue a página (F5).'; return; }
       b1.disabled = true; msg.style.color = '#333'; msg.textContent = 'Lendo todas as páginas da aba Despacho...';
       fundo.style.display = 'none';
-      try { const r = await D().lerExpedicao(); fundo.style.display = 'flex'; msg.style.color = '#9c3a00'; comecar(r.ids, 'aba Despacho, "Esperando Expedição"' + (r.total != null ? ' (a tela diz ' + r.total + ')' : '')); }
+      try { const r = await D().lerExpedicao(); fundo.style.display = 'flex'; msg.style.color = '#9c3a00'; comecar(r.ids, 'aba Despacho, "Esperando Expedição"' + (r.total != null ? ' (a tela diz ' + r.total + '; li ' + r.ids.length + (r.achados ? ', ' + r.achados + ' deles pela busca' : '') + ')' : '')); }
       catch (x) { fundo.style.display = 'flex'; msg.style.color = '#9c3a00'; msg.textContent = 'Erro: ' + x.message; }
       b1.disabled = false;
     }, 'pri');

@@ -296,6 +296,20 @@ async function lerPedidosDoStatus() {
 }
 // acha a linha do pedido na lista; se o Hubii esconder o pedido das páginas, procura pelo número na busca
 const fonteLista = () => usouApi && usouApi.ok ? 'Lista lida direto do servidor do Hubii (todos os ' + usouApi.total + ' pedidos, sem depender das páginas da tela).' : 'Lista lida da tela, página por página' + (usouApi ? ' (o servidor do Hubii não respondeu: ' + usouApi.motivo + ')' : '') + '.';
+// Sem a lista do servidor: procura um a um, pela busca do Hubii, os pedidos conhecidos (memória) que não apareceram
+// nas páginas da tela; os achados no status certo entram em ids.
+async function completarPelaBusca(ids, conhecidos) {
+  achadosNaBusca = [];
+  if (usouApi && usouApi.ok) return;
+  const sumidos = conhecidos.filter((id, i, a) => !ids.includes(id) && a.indexOf(id) === i);
+  if (!sumidos.length || sumidos.length > 80 || !await esperar(campoBuscaH, 5)) return;
+  for (let i = 0; i < sumidos.length; i++) {
+    const id = sumidos[i]; log('Procurando pela busca os que não apareceram nas páginas: ' + (i + 1) + ' de ' + sumidos.length + ' (#' + id + ')...');
+    setBuscaH(campoBuscaH(), id); await sleep(1800);
+    if (await esperar(() => lerLista().find(x => x.id === id), 6)) { ids.push(id); achadosNaBusca.push(id); }
+  }
+  limparBusca(); await sleep(1500); await esperar(() => lerLista().length > 0, 10);
+}
 async function acharPedido(id) {
   let p = lerLista().find(x => x.id === id); if (p) return p;
   const c = campoBuscaH();
@@ -547,16 +561,7 @@ async function levantarEtiquetas(reimprimir) {
   const total = lp.total;
   const fila = filaLer(); const filaIds = fila.map(x => x.id); const hs = histSet();
   // sem a lista do servidor: os pedidos da memória que não apareceram nas páginas são procurados um a um pela busca
-  achadosNaBusca = [];
-  const sumidos = filaIds.filter(id => !tela.includes(id) && !hs.has(id));
-  if (!(usouApi && usouApi.ok) && sumidos.length && sumidos.length <= 80 && await esperar(campoBuscaH, 5)) {
-    for (let i = 0; i < sumidos.length; i++) {
-      const id = sumidos[i]; log('Procurando pela busca os que não apareceram nas páginas: ' + (i + 1) + ' de ' + sumidos.length + ' (#' + id + ')...');
-      setBuscaH(campoBuscaH(), id); await sleep(1800);
-      if (await esperar(() => lerLista().find(x => x.id === id), 6)) { tela.push(id); achadosNaBusca.push(id); }
-    }
-    limparBusca(); await sleep(1500); await esperar(() => lerLista().length > 0, 10);
-  }
+  await completarPelaBusca(tela, filaIds.filter(id => !hs.has(id)));
   const noFila = filaIds.filter(id => tela.includes(id));
   const fora = tela.filter(id => !filaIds.includes(id));
   const horaDe = id => { const x = fila.find(f => f.id === id); return x && x.t ? hora(x.t) : '?'; };
@@ -648,8 +653,8 @@ async function rodarLerBR() {
   if (estaNoDetalhe()) { botao('voltar').click(); await esperar(() => !estaNoDetalhe(), 15); }
   if (!await prepararTela()) { fimCaixa('Não consegui deixar a tela em DESPACHO com o filtro "Esperando Expedição". Aplique à mão (Despacho > Filtros) e tente de novo. Nada foi aberto.'); return; }
   await esperar(() => lerLista().length > 0, 20); await sleep(800);
-  log('Lendo todas as páginas da lista...');
-  const ids = await varrerPaginas();
+  log('Lendo a lista completa...');
+  const ids = (await lerPedidosDoStatus()).ids;
   if (!ids.length) { fimCaixa('Não li nenhum pedido em "Esperando Expedição". Nada a fazer.'); return; }
   const m0 = brLer(); const falta = ids.filter(id => !m0[id]);
   if (!falta.length) { fimCaixa('Os ' + ids.length + ' pedidos da tela já têm o código BR na memória. Nada a fazer.'); return; }
@@ -867,8 +872,11 @@ window.__centralConfDados = {
       if (estaNoDetalhe()) { botao('voltar').click(); await esperar(() => !estaNoDetalhe(), 15); }
       if (!await prepararTela()) throw new Error('Não consegui deixar a tela em Despacho com o filtro "Esperando Expedição". Aplique à mão (Despacho > Filtros) e tente de novo.');
       await esperar(() => lerLista().length > 0, 20); await sleep(800);
-      const ids = await varrerPaginas();
-      return { ids, total: totalNaTela() };
+      const lp = await lerPedidosDoStatus(); const ids = lp.ids;
+      // conhecidos: memória dos descritivos + etiquetas impressas nos últimos 3 dias
+      const lim = Date.now() - 3 * 864e5;
+      await completarPelaBusca(ids, filaLer().map(x => x.id).concat(histLer().filter(x => !x.t || x.t >= lim).map(x => x.id)));
+      return { ids, total: lp.total, fonte: fonteLista(), achados: achadosNaBusca.length };
     } finally { ocupado = false; }
   }
 };
