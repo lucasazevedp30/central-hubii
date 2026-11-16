@@ -186,35 +186,56 @@ const prepararTela = async () => {
   return listaOk();
 };
 const primeiroDaLista = () => (lerLista()[0] || {}).id;
+const primeiroBruto = () => (linhasBrutas()[0] || {}).id;
+const pagTexto = () => { const m = pagInfo(); return m ? txt(m).replace(/\s+/g, ' ') : ''; };
+const pagFaixa = () => { const x = pagTexto().match(/mostrando\s+(\d+)\s+a\s+(\d+)/i); return x ? [parseInt(x[1], 10), parseInt(x[2], 10)] : null; };
+const ctrlPagina = n => pagControles().find(c => txt(c) === String(n));
+// troca de página e espera o "Mostrando X a Y" e a primeira linha mudarem (até 15 s; o Hubii fica lento com listas grandes)
 const irParaPagina = async ctrl => {
-  const antes = primeiroDaLista();
+  const a1 = primeiroBruto(), pa = pagTexto();
   ctrl.click();
-  await esperar(() => primeiroDaLista() && primeiroDaLista() !== antes, 4);
+  await esperar(() => pagTexto() !== pa && primeiroBruto() && primeiroBruto() !== a1, 15);
   await sleep(1200);
 };
+const paraPrimeira = async () => { const f = pagFaixa(); if (f && f[0] === 1) return; const c = ctrlPagina(1); if (c) await irParaPagina(c); };
+// Percorre as páginas em ordem (1, 2, 3...). A cada passo procura de novo o botão da próxima página:
+// com muitas páginas o Hubii esconde algumas atrás de "..." e redesenha os botões. Confere pelo "Mostrando X a Y"
+// se a página mudou mesmo (até 3 tentativas). fn(n) é chamada em cada página; se devolver algo, para ali.
+const percorrer = async fn => {
+  if (pagControles().length < 2) return fn(1);
+  await paraPrimeira();
+  const f1 = pagFaixa(); const tam = f1 && f1[0] === 1 ? f1[1] : 0;
+  for (let n = 1; n <= 300; n++) {
+    const r = fn(n); if (r) return r;
+    let foi = false;
+    for (let t = 0; t < 3 && !foi; t++) {
+      const prox = ctrlPagina(n + 1); if (!prox) return null;
+      await irParaPagina(prox);
+      const f = pagFaixa();
+      foi = !tam || !f || f[0] === n * tam + 1;
+      if (!foi) log('A página ' + (n + 1) + ' não abriu direito; tentando de novo...');
+    }
+    if (!foi) { log('Não consegui abrir a página ' + (n + 1) + ' da lista.'); return null; }
+  }
+  return null;
+};
 const varrerPaginas = async () => {
-  const ids = []; const add = () => lerLista().forEach(p => { if (!ids.includes(p.id)) ids.push(p.id); });
-  const ctrls = pagControles();
-  if (ctrls.length < 2) { add(); return ids; }
-  for (const c of ctrls) { await irParaPagina(c); add(); }
-  const c1 = pagControles()[0] || ctrls[0];
-  await irParaPagina(c1);
+  const ids = [];
+  await percorrer(() => { lerLista().forEach(p => { if (!ids.includes(p.id)) ids.push(p.id); }); return null; });
+  if (pagControles().length >= 2) await paraPrimeira();
   return ids;
 };
 let paginaDaVez = null;
 const naLista = async id => {
   let p = lerLista().find(x => x.id === id); if (p) return p;
-  const ctrls = pagControles();
-  if (ctrls.length < 2) return null;
-  const ordem = ctrls.slice();
-  if (paginaDaVez) ordem.sort((a, b) => (txt(a) === paginaDaVez ? -1 : 0) - (txt(b) === paginaDaVez ? -1 : 0));
-  for (const c of ordem) {
-    const num = txt(c);
-    await irParaPagina(c);
-    p = lerLista().find(x => x.id === id);
-    if (p) { paginaDaVez = num; return p; }
-  }
-  return null;
+  if (pagControles().length < 2) return null;
+  // tenta primeiro a página onde achou o último pedido; depois percorre todas em ordem
+  const c = paginaDaVez && ctrlPagina(paginaDaVez);
+  if (c) { await irParaPagina(c); p = lerLista().find(x => x.id === id); if (p) return p; }
+  let pag = null;
+  p = await percorrer(n => { const a = lerLista().find(x => x.id === id); if (a) pag = n; return a || null; });
+  if (p) paginaDaVez = pag;
+  return p;
 };
 
 // abre o pedido clicando na linha; se abrir outro pedido ou nada, volta para a lista e tenta de novo (até 3 vezes)
