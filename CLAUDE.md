@@ -47,9 +47,12 @@ extensão (apaga os dados); recarregar sempre da mesma pasta.
 2. Testar o que der: `pwsh` para conferir sintaxe dos `.ps1` e rodar o servidor; Playwright para o
    `painel.html`. (No Linux o servidor procura `extensao-central-hubii\manifest.json` com barra
    invertida no nome: criar uma cópia com esse nome numa pasta de teste.)
-3. Commit e `./publicar.sh` — cria o zip `hubii-central-x.y.z.zip` (com `hubii-pacote/` no topo), o
-   `.sha256` e a release `vx.y.z` no GitHub com as novidades. A Central na loja avisa sozinha na aba
-   Hoje; o usuário clica em "Instalar a versão nova".
+3. Commit e `./publicar.sh notas.md` (notas = "O que mudou", em português, curto). Ele cria
+   `versoes/hubii-central-x.y.z.zip` (com `hubii-pacote/` no topo), atualiza `versao.json` (versão,
+   arquivo, SHA-256, novidades), faz commit e envia. A Central na loja lê
+   `raw.githubusercontent.com/<repo>/main/versao.json`, avisa na aba Hoje e o usuário clica em
+   "Instalar a versão nova". (Releases do GitHub não podem ser criadas por estas sessões; por isso a pasta
+   `versoes/`. Não apagar `versao.json` nem o zip da última versão.)
 4. `hubii-pacote/atualizacao-online.txt` precisa continuar com `lucasazevedp30/central-hubii`, senão a
    atualização pela internet se desliga nas lojas.
 5. Também dá para mandar o zip para o usuário instalar por "Instalar de um arquivo .zip".

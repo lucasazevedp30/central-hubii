@@ -153,37 +153,40 @@ function VoltarVersao([bool]$confirmado) {
 }
 # ---------- atualizacao pela internet (versoes publicadas no GitHub)
 # O endereco fica em atualizacao-online.txt (dono/repositorio). Vazio = desligado.
+# No repositorio, versao.json diz qual e a ultima versao e onde esta o zip (pasta versoes/).
 # So baixa; quem instala e o mesmo InstalarZip do botao "Instalar de um arquivo .zip" (mesmas conferencias).
 $repoOnline = ''
 try { $repoOnline = ([System.IO.File]::ReadAllText((Join-Path $dir 'atualizacao-online.txt'), $utf8)).Trim() } catch { }
 if ($repoOnline -notmatch '^[A-Za-z0-9-]{1,39}/[A-Za-z0-9._-]{1,100}$') { $repoOnline = '' }
+$rawBase = "https://raw.githubusercontent.com/$repoOnline/main/"
 $online = @{ t = [datetime]::MinValue; r = $null }
 function Web($url, $arquivo) {
     try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 } catch { }
-    $p = @{ Uri = $url; UseBasicParsing = $true; TimeoutSec = 20; Headers = @{ 'User-Agent' = 'central-hubii'; 'Accept' = 'application/vnd.github+json' } }
+    $p = @{ Uri = $url; UseBasicParsing = $true; TimeoutSec = 20; Headers = @{ 'User-Agent' = 'central-hubii'; 'Cache-Control' = 'no-cache' } }
     if ($arquivo) { $p.TimeoutSec = 180; $p.OutFile = $arquivo; Invoke-WebRequest @p | Out-Null; return }
-    return (Invoke-RestMethod @p)
+    # le como texto UTF-8 (o Invoke-RestMethod do PowerShell 5.1 pode estragar os acentos)
+    $r = Invoke-WebRequest @p
+    $b = $r.RawContentStream.ToArray()
+    return ([System.Text.Encoding]::UTF8.GetString($b).TrimStart([char]0xFEFF) | ConvertFrom-Json)
 }
 function BuscarOnline([bool]$forcar) {
     if (-not $repoOnline) { return @{ ok = $false; desligado = $true; msg = 'A atualização pela internet ainda não está ligada nesta versão.' } }
     if (-not $forcar -and $online.r -and ((Get-Date) - $online.t).TotalMinutes -lt 30) { return $online.r }
     $atual = LerVersao $dir
-    try { $rel = Web "https://api.github.com/repos/$repoOnline/releases/latest" $null }
+    try { $inf = Web ($rawBase + 'versao.json?t=' + [DateTimeOffset]::Now.ToUnixTimeSeconds()) $null }
     catch {
         $cod = 0; try { $cod = [int]$_.Exception.Response.StatusCode } catch { }
         if ($cod -eq 404) { $r = @{ ok = $false; msg = 'Ainda não há nenhuma versão publicada na internet.' } }
         else { $r = @{ ok = $false; msg = 'Não consegui falar com o GitHub (sem internet ou bloqueado nesta rede). Detalhe: ' + $_.Exception.Message } }
         $online.t = Get-Date; $online.r = $r; return $r
     }
-    $nova = $null; try { $nova = [version](([string]$rel.tag_name) -replace '^[vV]', '') } catch { }
-    $zipA = @($rel.assets) | Where-Object { $_.name -match '^hubii-central-[\d.]+\.zip$' } | Select-Object -First 1
-    $shaA = $null; if ($zipA) { $shaA = @($rel.assets) | Where-Object { $_.name -eq ($zipA.name + '.sha256') } | Select-Object -First 1 }
-    if (-not $nova -or -not $zipA) { $r = @{ ok = $false; msg = 'A versão publicada na internet está incompleta (sem o pacote). Avise o Claude.' } }
+    $nova = $null; try { $nova = [version]([string]$inf.versao) } catch { }
+    $arq = [string]$inf.arquivo; $sha = ([string]$inf.sha256).ToLower()
+    if (-not $nova -or $arq -notmatch '^versoes/hubii-central-[\d.]+\.zip$' -or $sha -notmatch '^[a-f0-9]{64}$') { $r = @{ ok = $false; msg = 'A versão publicada na internet está incompleta. Avise o Claude.' } }
     else {
-        $txt = [string]$rel.body; if ($txt.Length -gt 3000) { $txt = $txt.Substring(0, 3000) + '...' }
-        $data = ''; try { $data = ([datetime]$rel.published_at).ToLocalTime().ToString('dd/MM/yyyy HH:mm') } catch { }
-        $sha = ''; if ([string]$zipA.digest -match '^sha256:([a-f0-9]{64})$') { $sha = $Matches[1] }
-        $r = @{ ok = $true; atual = "$atual"; nova = "$nova"; temNova = [bool]($atual -and $nova -gt $atual); novidades = $txt; data = $data; tamanho = [int64]$zipA.size; url = [string]$zipA.browser_download_url; sha = $sha; shaUrl = $(if ($shaA) { [string]$shaA.browser_download_url } else { '' }) }
+        $txt = [string]$inf.novidades; if ($txt.Length -gt 3000) { $txt = $txt.Substring(0, 3000) + '...' }
+        $data = ''; try { $data = ([datetime]$inf.data).ToLocalTime().ToString('dd/MM/yyyy HH:mm') } catch { }
+        $r = @{ ok = $true; atual = "$atual"; nova = "$nova"; temNova = [bool]($atual -and $nova -gt $atual); novidades = $txt; data = $data; tamanho = [int64]$inf.tamanho; url = ($rawBase + $arq); sha = $sha }
     }
     $online.t = Get-Date; $online.r = $r; return $r
 }
@@ -192,17 +195,12 @@ function InstalarOnline([bool]$confirmado) {
     $info = BuscarOnline $true
     if (-not $info.ok) { return $info }
     if (-not $info.temNova -and -not $confirmado) { return @{ ok = $false; confirmar = "A versão da internet ($($info.nova)) é a mesma que já está instalada. Instalar de novo mesmo assim?" } }
-    if ($info.url -notmatch '^https://(github\.com|objects\.githubusercontent\.com)/') { return @{ ok = $false; msg = 'Endereço do pacote estranho; não baixei nada.' } }
+    if (-not $info.url.StartsWith($rawBase)) { return @{ ok = $false; msg = 'Endereço do pacote estranho; não baixei nada.' } }
     $arq = Join-Path $atuDir 'baixado.zip'
     try { [void](Web $info.url $arq) } catch { return @{ ok = $false; msg = 'Não consegui baixar o pacote. Nada mudou. Detalhe: ' + $_.Exception.Message } }
     $bytes = [System.IO.File]::ReadAllBytes($arq); Remove-Item $arq -Force -ErrorAction SilentlyContinue
     # confere a "impressao digital" (SHA-256) do pacote: se o arquivo chegou corrompido ou trocado, nao instala
     $esperado = $info.sha
-    if (-not $esperado -and $info.shaUrl) {
-        $s = Join-Path $atuDir 'baixado.sha256'
-        try { [void](Web $info.shaUrl $s); $t = [System.IO.File]::ReadAllText($s); if ($t -match '([a-fA-F0-9]{64})') { $esperado = $Matches[1].ToLower() } } catch { }
-        Remove-Item $s -Force -ErrorAction SilentlyContinue
-    }
     if (-not $esperado) { return @{ ok = $false; msg = 'O pacote da internet veio sem a conferência (SHA-256). Por segurança não instalei. Nada mudou.' } }
     $h = [System.Security.Cryptography.SHA256]::Create()
     $calc = ([System.BitConverter]::ToString($h.ComputeHash($bytes)) -replace '-', '').ToLower()
