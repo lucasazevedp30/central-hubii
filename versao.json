@@ -1,8 +1,8 @@
 {
-  "versao": "2.17.0",
-  "arquivo": "versoes/hubii-central-2.17.0.zip",
-  "sha256": "2cbda0606604beec342f6d1cb7687f43d309fb9b50331346963c46467df88977",
-  "tamanho": 979712,
-  "data": "2026-11-16T14:39:50Z",
-  "novidades": "- Correção principal: o Hubii repete e esconde pedidos ao passar as páginas (ex.: 173 de 201). Agora Descritivos e Etiquetas leem a lista completa direto do servidor do Hubii, sem depender das páginas.\n- Pedido que o Hubii esconde das páginas é aberto pela busca do número.\n- A janela de conferência diz de onde veio a lista. Se o servidor não responder, a Central lê a tela como antes."
+  "versao": "2.17.1",
+  "arquivo": "versoes/hubii-central-2.17.1.zip",
+  "sha256": "18a3adcf6110053b41e085c70b35090540d9533ab203790adc81674a07d15c6a",
+  "tamanho": 981796,
+  "data": "2026-11-16T15:35:11Z",
+  "novidades": "- Correção: a leitura da lista pelo servidor do Hubii falhava (\"Failed to fetch\"). Agora a Central repete o mesmo pedido que a tela do Hubii faz, com as mesmas credenciais.\n- Se o servidor ainda assim falhar, os pedidos da memória que o Hubii esconde das páginas são procurados um a um pela busca e entram na lista."
 }
