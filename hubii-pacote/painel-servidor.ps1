@@ -280,13 +280,18 @@ function Rodar($arquivo) {
 # Coletar, Verificar e Baixa abrem no Chrome da Central (o mesmo das impressoes), que ja roda no "modo segundo plano".
 # Assim o Chrome do pessoal nunca e fechado nem precisa ser reaberto.
 $raizCentral = Join-Path $env:LOCALAPPDATA 'CentralHubiiChrome'
-function ChromeCentral([string[]]$urls, [string]$oque) {
+function ChromeCentral([string[]]$urls, [string]$oque, [bool]$aba) {
     if (-not (Test-Path $chrome)) { return @{ ok = $false; msg = 'Navegador nao encontrado (nem Chrome nem Brave).' } }
     if (-not (Test-Path (Join-Path $raizCentral 'Default\Preferences'))) { return @{ ok = $false; msg = 'O Chrome da Central ainda nao foi preparado neste computador. Clique uma vez em Imprimir descritivos (ele mostra o passo a passo da primeira vez) e depois tente de novo.' } }
     $aberto = $false
     try { $aberto = [bool](@(Get-CimInstance Win32_Process -Filter "Name='chrome.exe' OR Name='brave.exe'" -ErrorAction Stop | Where-Object { $_.CommandLine -like '*CentralHubiiChrome*' }).Count) } catch { }
     # as mesmas opcoes do Descritivos.bat (so valem quando o Chrome da Central e aberto agora; se ja estava aberto, ele ja tem)
     $args0 = @("--user-data-dir=`"$raizCentral`"", '--profile-directory=Default', '--kiosk-printing', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding', '--disable-background-timer-throttling', '--disable-features=CalculateNativeWinOcclusion', '--no-first-run', '--no-default-browser-check', '--hide-crash-restore-bubble')
+    if ($aberto -and $aba) {
+        # ja aberto: so uma aba nova na janela que esta em uso (sem abrir outra janela)
+        foreach ($u in $urls) { Start-Process -FilePath $chrome -ArgumentList @("--user-data-dir=`"$raizCentral`"", '--profile-directory=Default', $u) }
+        return @{ ok = $true; msg = "Abrindo $oque numa aba nova do Chrome da Central. Enquanto a rotina roda, fique nessa aba (a rotina pausa se a aba ficar escondida)." }
+    }
     $n = 0
     foreach ($u in $urls) {
         if ($n -gt 0) { Start-Sleep -Seconds $(if ($aberto) { 1 } else { 3 }) }
@@ -303,7 +308,7 @@ function Acao($a, [bool]$confirmado, $dados) {
         'voltarmp'    { $cache.t = [datetime]::MinValue; return (Rodar 'Voltar-MP.bat') }
         'centralantiga' { return (Rodar 'Central-antiga.bat') }
         'verificar'   { return (ChromeCentral @('https://hub.hubii.co/pedidos', 'https://onehub.onepet.com.br/onehub') 'o Hubii e o OneHub (uma janela cada)') }
-        'coletar'     { return (ChromeCentral @($urlPendencias + '&central=coletar') 'as Pendencias do OnePet') }
+        'coletar'     { return (ChromeCentral @($urlPendencias + '&central=coletar') 'as Pendencias do OnePet' $true) }
         'baixa'       { return (ChromeCentral @($urlPendencias) 'as Pendencias do OnePet (Baixa Hubii)') }
         'extensoes'   { if (Test-Path $chrome) { Start-Process -FilePath $chrome -ArgumentList @("--profile-directory=`"$perfil`"", '--new-window', 'chrome://extensions') }; return @{ ok = $true; msg = 'Abrindo as extensoes do Chrome...' } }
         'abrirpedido' {

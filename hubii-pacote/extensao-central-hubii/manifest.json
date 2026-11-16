@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Central Hubii - Pet Fun",
-  "version": "2.16.3",
+  "version": "2.16.4",
   "description": "Impressão (descritivos e etiquetas com lista de conferência), pendências do Hubii/OneHub e baixa no OnePet.",
   "permissions": [
     "storage",
