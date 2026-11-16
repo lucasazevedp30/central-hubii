@@ -67,7 +67,10 @@ extensão (apaga os dados); recarregar sempre da mesma pasta.
 5. Também dá para mandar o zip para o usuário instalar por "Instalar de um arquivo .zip".
 
 ## Em aberto
-- Alertas de compra (limite escolhido pelo usuário) depois de uma semana de dados.
-- Configuração por loja + instalador, se a ideia de levar a outras lojas avançar
-  (hoje perfil do Chrome, impressoras e endereços estão fixos no código).
-- "Retomar de onde parou" em todas as rotinas.
+- Confirmar no Hubii real se a lista vem do servidor (`hook-lista.js`) ou da busca um a um (mensagem na conferência).
+- Verificar pendências (`pend.js`) também lê listas do Hubii: conferir se sofre com o defeito de paginação.
+- "Retomar de onde parou" em todas as rotinas (o usuário aprovou).
+- Alertas de compra: alerta de SAÍDA feito na 2.17.4 (limite e marcas sem alerta; padrão Royal Canin e Premier,
+  que têm estoque alto). Estoque do OnePet não é confiável (físico x virtual): não usar.
+- Reembolso da Shopee: esperando retorno do responsável. Vídeo: esperando áudios do ElevenLabs.
+- Por último (quando o resto estiver 100%): outras lojas — configuração por loja, instalador, fixar ID da extensão.

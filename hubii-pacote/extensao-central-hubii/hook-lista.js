@@ -37,7 +37,7 @@
   const repetir = async params => {
     if (!modelo) throw new Error('a tela do Hubii ainda não carregou a lista (sem modelo)');
     const u = new URL(modelo.url);
-    Object.keys(params || {}).forEach(k => u.searchParams.set(k, String(params[k])));
+    Object.keys(params || {}).forEach(k => { if (params[k] == null) u.searchParams.delete(k); else u.searchParams.set(k, String(params[k])); });
     if (!RX.test(u.toString())) throw new Error('endereço inesperado');
     if (modelo.via === 'xhr') {
       return await new Promise((ok, falha) => {

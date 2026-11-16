@@ -263,8 +263,9 @@ const pedirLista = params => new Promise((ok, falha) => {
   window.postMessage({ central: 'lista-pedir', n, params }, '*');
 });
 async function lerApi(statusRotulo) {
-  const pedir = (ordem, pag, por) => pedirLista({ expedition_type: 'drop_off', delivery_status_str: JSON.stringify([statusRotulo]), order_by: ordem, order_direction: 'asc', page: pag, per_page: por });
-  const alvo = nt(statusRotulo); let ultimo = '';
+  // statusRotulo vazio = todos os status da aba Despacho
+  const pedir = (ordem, pag, por) => pedirLista({ expedition_type: 'drop_off', delivery_status_str: statusRotulo ? JSON.stringify([statusRotulo]) : null, order_by: ordem, order_direction: 'asc', page: pag, per_page: por });
+  const alvo = statusRotulo ? nt(statusRotulo) : null; let ultimo = '';
   for (const [ordem, por] of [['next_sla', 500], ['order_id', 100], ['accepted_at', 100], ['next_sla', 100]]) {
     try {
       const ids = []; let total = null, paginas = 1;
@@ -274,7 +275,7 @@ async function lerApi(statusRotulo) {
         total = Number(j.total); paginas = Number(j.total_pages) || 1;
         j.data.forEach(o => {
           const id = String(o.order_id || '');
-          if (/^\d{5,9}$/.test(id) && nt(o.delivery_status_str) === alvo && (!o.expedition_type || o.expedition_type === 'drop_off') && !ids.includes(id)) ids.push(id);
+          if (/^\d{5,9}$/.test(id) && (!alvo || nt(o.delivery_status_str) === alvo) && (!o.expedition_type || o.expedition_type === 'drop_off') && !ids.includes(id)) ids.push(id);
         });
       }
       if (Number.isFinite(total) && ids.length === total) return { ok: true, ids, total, ordem };
@@ -825,19 +826,34 @@ function procurarProduto() {
       if (!abaAtiva(ab)) { ab.click(); await sleep(2500); }
       TODOS = true;
       await esperar(() => linhasBrutas().length > 0, 20); await sleep(800);
-      msg('Lendo a lista de pedidos (todas as páginas)...');
-      const ids = await varrerPaginas();
+      // 1) lista de pedidos da aba Despacho: pelo servidor do Hubii (todos os status); senão, pela tela
+      msg('Lendo a lista de pedidos da aba Despacho...');
+      let ids, total; const api = await lerApi(null);
+      if (api.ok) { ids = api.ids; total = api.total; }
+      else {
+        msg('Lendo a lista de pedidos pela tela (todas as páginas)...');
+        ids = await varrerPaginas(); total = totalNaTela();
+        extra.push('A lista veio da tela, página por página (o servidor do Hubii não respondeu: ' + api.motivo + '). Em dias com mais de 100 pedidos, alguns podem ter ficado de fora.');
+      }
       if (!ids.length) { msg('Não li nenhum pedido na aba Despacho.', 'ch-erro'); return; }
-      const total = totalNaTela(), badge = badgeDespacho();
+      const badge = badgeDespacho();
       if ((total != null && total !== ids.length) || (badge != null && badge !== ids.length))
-        extra.push('Atenção: li ' + ids.length + ' pedidos, mas a tela indica ' + (total != null ? total + ' na lista' : '') + (badge != null ? (total != null ? ' e ' : '') + badge + ' na aba Despacho' : '') + '. Se houver filtro ativo (botão Filtros), limpe e busque de novo.');
+        extra.push('Atenção: li ' + ids.length + ' pedidos, mas ' + (total != null ? 'a lista indica ' + total : '') + (badge != null ? (total != null ? ' e ' : '') + 'a aba Despacho indica ' + badge : '') + '. Se houver filtro ativo (botão Filtros), limpe e busque de novo.');
+      // 2) produtos: primeiro a leitura guardada e o Histórico de pedidos; só abre no Hubii os que faltam
       const cache = prodLer();
+      let doHist = 0;
+      if (!chkAtu.checked && window.__centralReg && window.__centralReg.eansDe) {
+        const hist = await window.__centralReg.eansDe(ids.filter(id => !cache[id]));
+        Object.keys(hist).forEach(id => { cache[id] = { eans: hist[id], t: Date.now() }; doHist++; });
+        if (doHist) gravar(K_PROD, cache);
+      }
       const falta = ids.filter(id => chkAtu.checked || !cache[id]);
+      if (falta.length) msg((ids.length - falta.length) + ' pedido(s) já com produtos anotados' + (doHist ? ' (' + doHist + ' pelo Histórico)' : '') + '; abrindo ' + falta.length + ' no Hubii...');
       const semEan = [], falhou = [];
       for (let i = 0; i < falta.length && !pararBusca; i++) {
         const id = falta[i];
         msg('Lendo produtos: #' + id + ' (' + (i + 1) + ' de ' + falta.length + ')...' + (document.hidden ? ' Deixe esta aba à vista, sem trocar de aba.' : ''));
-        const alvo = await naLista(id);
+        const alvo = await acharPedido(id);
         if (!alvo) { falhou.push(id); continue; }
                 if (!await abrirPedido(id, alvo)) { falhou.push(id); extra.push('Não consegui abrir #' + id + '. Parei a leitura.'); break; }
         await sleep(1500);
@@ -855,7 +871,7 @@ function procurarProduto() {
       mostrar(ean, ids, cache, extra);
       msg('Pronto. ' + lidos + ' de ' + ids.length + ' pedidos do Despacho conferidos. Pode digitar outro EAN: a leitura fica guardada e a próxima busca é bem mais rápida.', 'ch-ok');
     } catch (e) { console.error(e); msg('Erro: ' + e.message, 'ch-erro'); }
-    finally { TODOS = false; buscandoProd = false; ocupado = false; bBusca.disabled = false; bParar.style.display = 'none'; }
+    finally { limparBusca(); TODOS = false; buscandoProd = false; ocupado = false; bBusca.disabled = false; bParar.style.display = 'none'; }
   };
   inp.focus();
 }

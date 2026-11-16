@@ -237,5 +237,14 @@ const pedido = (id, campos) => {
   return filaPed;
 };
 
-window.__centralReg = { add, dur, abrirRelatorio, DEF, calcular, corpoHtml, textoPlano, CSS, pedido };
+// EANs já anotados no histórico para uma lista de pedidos: { "<pedido>": ["EAN", ...] } (só os que têm produtos)
+const eansDe = async ids => {
+  const r = {}; const lista = (ids || []).map(i => String(i)).filter(i => /^\d{5,9}$/.test(i));
+  for (let i = 0; i < lista.length; i += 200) {
+    const parte = lista.slice(i, i + 200); const o = await stGet(parte.map(x => 'h_' + x));
+    parte.forEach(x => { const v = o['h_' + x]; if (v && Array.isArray(v.itens) && v.itens.length) r[x] = [...new Set(v.itens.map(y => String(y.e)).filter(Boolean))]; });
+  }
+  return r;
+};
+window.__centralReg = { add, dur, abrirRelatorio, DEF, calcular, corpoHtml, textoPlano, CSS, pedido, eansDe };
 })();

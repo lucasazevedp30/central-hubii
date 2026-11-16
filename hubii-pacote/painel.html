@@ -157,7 +157,9 @@ footer .esp{flex:1}
     <label>Período <select id="cPer"><option value="semana" selected>Esta semana (segunda até hoje)</option><option value="passada">Semana passada</option><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="pers">Escolher datas</option></select></label>
     <span id="cDatas" style="display:none"><label>de <input type="date" id="cDe"></label> <label>até <input type="date" id="cAte"></label></span>
     <input type="search" id="cBusca" placeholder="Filtrar por nome, marca ou EAN" style="min-width:200px">
-    <label>Mostrar <select id="cAcao"><option value="">Tudo</option><option value="Comprar (ruptura)">Só o que preciso comprar</option><option value="Verificar ERP">Só verificar no ERP</option><option value="Não trabalha">Só não trabalha</option><option value="cruz">Só o que saiu e teve recusa</option></select></label>
+    <label>Mostrar <select id="cAcao"><option value="">Tudo</option><option value="Comprar (ruptura)">Só o que preciso comprar</option><option value="Verificar ERP">Só verificar no ERP</option><option value="Não trabalha">Só não trabalha</option><option value="cruz">Só o que saiu e teve recusa</option><option value="alerta">Só alertas de saída</option></select></label>
+    <label title="Produto que saiu esta quantidade ou mais no período ganha o alerta">Alerta de saída a partir de <input type="number" id="cLim" min="1" style="width:64px"> un.</label>
+    <label title="Marcas com bastante estoque na loja: não geram alerta (separe por vírgula)">Sem alerta para <input type="text" id="cIgn" style="width:180px" placeholder="marcas, separadas por vírgula"></label>
     <button id="cAtu">Atualizar</button>
     <button class="pri" id="cXlsx">Baixar planilha da compra</button>
   </div>
@@ -363,6 +365,12 @@ function desenhar(s) {
     b.onclick = () => { document.querySelector('.aba[data-v="vAjuda"]').click(); mostrarOnline(ONLINE); $('atOnline').scrollIntoView({ behavior: 'smooth', block: 'center' }); };
     a.append(b); al.append(a);
   }
+  if (ALERTA_HOJE && ALERTA_HOJE.n) {
+    const a = el('div', 'alerta av', 'Compra: ' + ALERTA_HOJE.n + ' produto(s) com saída alta nos últimos 7 dias (' + ALERTA_HOJE.lim + ' un. ou mais): ' + ALERTA_HOJE.top.join('; ') + (ALERTA_HOJE.n > 3 ? '...' : '') + ' ');
+    const b = el('button', '', 'Ver na Compra contínua'); b.style.marginLeft = '8px';
+    b.onclick = () => { $('cPer').value = '7'; $('cDatas').style.display = 'none'; $('cAcao').value = 'alerta'; document.querySelector('.aba[data-v="vCompra"]').click(); };
+    a.append(b); al.append(a);
+  }
   if (imp.mp === 'offline') avisa('O Windows diz que a MP-4200 TH está offline. Se ela estiver imprimindo normalmente, pode ignorar; senão, confira o cabo e se ela está ligada.', 'av');
   if (imp.padrao && !/MP-4200/.test(imp.padrao) && !pr.ajudante) avisa('A impressora padrão está em "' + imp.padrao + '" e o ajudante de etiquetas está desligado. Se já terminou as etiquetas, use "Voltar a MP-4200 como padrão".', 'av');
 
@@ -476,8 +484,13 @@ function periodoCompra() {
   if (v === 'pers') { const de = $('cDe').value ? new Date($('cDe').value + 'T00:00:00').getTime() : seg.getTime(); const ate = $('cAte').value ? new Date($('cAte').value + 'T23:59:59').getTime() : Date.now(); return [de, ate]; }
   return [inicioDias(+v), Date.now()];
 }
-function somarCompra() {
-  const [de, ate] = periodoCompra(), q = norm($('cBusca').value.trim());
+// ---------- alerta de saída (limite e marcas sem alerta ficam guardados neste computador)
+const K_ALERTA = 'central_alerta';
+const alertaCfg = () => { let c = null; try { c = JSON.parse(localStorage.getItem(K_ALERTA) || 'null'); } catch (e) {} c = c || {}; return { lim: c.lim > 0 ? c.lim : 10, ign: typeof c.ign === 'string' ? c.ign : 'Royal Canin, Premier' }; };
+const alertaGravar = c => { try { localStorage.setItem(K_ALERTA, JSON.stringify(c)); } catch (e) {} };
+const marcaSemAlerta = (nome, cfg) => cfg.ign.split(',').map(x => norm(x.trim())).filter(Boolean).some(m => norm(nome).includes(m));
+const comAlerta = (a, cfg) => a.un >= cfg.lim && !marcaSemAlerta(a.n, cfg);
+function somarSaida(de, ate) {
   const peds = HIST.filter(r => { const t = tSaida(r); return t && t >= de && t <= ate; });
   const P = new Map(); let semProd = 0;
   peds.forEach(r => {
@@ -489,22 +502,30 @@ function somarCompra() {
       a.peds.add(r.id); a.ult = Math.max(a.ult, tSaida(r)); P.set(i.e, a);
     });
   });
+  const cfg = alertaCfg(); const todos = [...P.values()]; todos.forEach(a => { a.alerta = comAlerta(a, cfg); });
+  return { peds, semProd, todos, cfg };
+}
+function somarCompra() {
+  const [de, ate] = periodoCompra(), q = norm($('cBusca').value.trim());
+  const S = somarSaida(de, ate);
   const fa = $('cAcao').value, rp = recPorEan();
-  const lista = [...P.values()].filter(a => (!q || a.e.includes(q) || norm(a.n).includes(q)) && (!fa || (rp.has(a.e) && (fa === 'cruz' || rp.get(a.e).acao === fa)))).sort((a, b) => b.un - a.un || b.peds.size - a.peds.size);
-  return { de, ate, peds, semProd, lista };
+  const lista = S.todos.filter(a => (!q || a.e.includes(q) || norm(a.n).includes(q)) && (!fa || (fa === 'alerta' ? a.alerta : (rp.has(a.e) && (fa === 'cruz' || rp.get(a.e).acao === fa))))).sort((a, b) => b.un - a.un || b.peds.size - a.peds.size);
+  return { de, ate, peds: S.peds, semProd: S.semProd, lista, alertas: S.todos.filter(a => a.alerta).length, cfg: S.cfg };
 }
 function mostrarCompra() {
   const R = somarCompra(), corpo = $('cCorpo'); corpo.replaceChildren();
   const un = R.lista.reduce((s, a) => s + a.un, 0);
   const itens = [['Pedidos no período', R.peds.length], ['Produtos diferentes', R.lista.length], ['Unidades', un]];
   $('cRes').replaceChildren(...itens.map(([a, b]) => { const x = el('span'); x.append(el('b', '', b), document.createTextNode(' ' + a.toLowerCase())); return x; }), el('span', '', dataDe(R.de) + ' a ' + dataDe(R.ate)));
+  if (R.alertas) $('cRes').append(el('span', 'avc', R.alertas + ' alerta(s) de saída (' + R.cfg.lim + ' un. ou mais)'));
   if (R.semProd) $('cRes').append(el('span', 'avc', R.semProd + ' pedido(s) sem produtos lidos (ficam de fora da soma)'));
   if (!R.lista.length) { const tr = el('tr'); const td = el('td', 'mut', HIST.length ? ($('cAcao').value || $('cBusca').value ? 'Nenhum produto com esse filtro.' : 'Nenhum produto no período.') : 'Os produtos começam a ser registrados nos próximos descritivos feitos com a Central 2.12 ou mais nova.'); td.colSpan = 7; tr.append(td); corpo.append(tr); mostrarRecusas(R); return; }
   R.lista.forEach(a => {
     const tr = el('tr');
     const rc = recPorEan().get(a.e); const tdR = el('td');
     if (rc) { tdR.append(el('span', 'tag ' + rc.cls, rc.acao), document.createTextNode(' ' + rc.q + ' un.')); } else tdR.append(el('span', 'mut', '—'));
-    tr.append(el('td', '', a.n || '(sem nome)'), el('td', 'mut', a.e), el('td', 'n', a.un + (a.semQtd ? '*' : '')), el('td', 'n', a.peds.size), el('td', 'n', (a.un / a.peds.size).toFixed(1).replace('.', ',')), el('td', 'mut', diaHora(a.ult)), tdR);
+    const tdN = el('td', '', a.n || '(sem nome)'); if (a.alerta) { tdN.append(document.createTextNode(' ')); tdN.append(el('span', 'tag e', 'saída alta')); }
+    tr.append(tdN, el('td', 'mut', a.e), el('td', 'n', a.un + (a.semQtd ? '*' : '')), el('td', 'n', a.peds.size), el('td', 'n', (a.un / a.peds.size).toFixed(1).replace('.', ',')), el('td', 'mut', diaHora(a.ult)), tdR);
     corpo.append(tr);
   });
   mostrarRecusas(R);
@@ -546,7 +567,7 @@ function mostrarRecusas(R) {
   $('rBloco').style.display = 'block';
   const corpo = $('rCorpo'); corpo.replaceChildren();
   const fa = $('cAcao').value, q = norm($('cBusca').value.trim());
-  recs.filter(r => (!fa || (fa === 'cruz' ? saiu.has(r.e) : r.acao === fa)) && (!q || r.e.includes(q) || norm(r.n).includes(q) || norm(r.marca).includes(q))).sort((a, b) => (b.v || 0) - (a.v || 0)).forEach(r => {
+  recs.filter(r => (!fa || (fa === 'cruz' || fa === 'alerta' ? saiu.has(r.e) : r.acao === fa)) && (!q || r.e.includes(q) || norm(r.n).includes(q) || norm(r.marca).includes(q))).sort((a, b) => (b.v || 0) - (a.v || 0)).forEach(r => {
     const tr = el('tr'); const tdA = el('td'); tdA.append(el('span', 'tag ' + r.cls, r.acao));
     const s = saiu.get(r.e);
     tr.append(el('td', '', r.n), el('td', 'mut', r.e), el('td', 'mut', r.motivo), tdA, el('td', 'n', r.q), el('td', 'n', brl(r.v)), el('td', 'n', r.pct != null ? r.pct.toFixed(1).replace('.', ',') + '%' : ''), el('td', 'n ' + (s ? 'okc' : 'mut'), s ? s + ' un.' : '—'));
@@ -560,6 +581,8 @@ $('rCruzar').onclick = () => {
   RECCACHE = null; $('rTxt').value = ''; $('rMsg').textContent = l.length + ' produto(s) recusado(s) lido(s).'; mostrarCompra();
 };
 $('rLimpar').onclick = () => { try { localStorage.removeItem(K_REC); } catch (e) {} RECCACHE = null; $('rMsg').textContent = 'Recusas apagadas.'; mostrarCompra(); };
+{ const c0 = alertaCfg(); $('cLim').value = c0.lim; $('cIgn').value = c0.ign; }
+['cLim', 'cIgn'].forEach(k => $(k).addEventListener('change', () => { const lim = parseInt($('cLim').value, 10); alertaGravar({ lim: lim > 0 ? lim : 10, ign: $('cIgn').value }); $('cLim').value = alertaCfg().lim; mostrarCompra(); atualizarAlertaHoje(); }));
 $('cPer').addEventListener('input', () => { $('cDatas').style.display = $('cPer').value === 'pers' ? '' : 'none'; mostrarCompra(); });
 ['cDe', 'cAte', 'cBusca', 'cAcao'].forEach(i => $(i).addEventListener('input', mostrarCompra));
 $('cAtu').onclick = async () => { await carregarHist(true); mostrarCompra(); };
@@ -584,10 +607,10 @@ $('cXlsx').onclick = () => {
   const P = planilhaPronta(); if (!P) return; const R = somarCompra();
   const est = P.novoEstilo(); const cab = est.get({ b: true, color: 'FFFFFFFF', fill: 'FF3A1F6D', borda: true, h: 'center' }); const c = est.get({ borda: true }); const nb = est.get({ borda: true, b: true });
   const per = dataDe(R.de) + ' a ' + dataDe(R.ate);
-  const p = P.novaPlanilha('Saída por produto', 'FF5B3CC4'); p.larguras = [70, 16, 11, 10, 14, 16]; p.congelar = [0, 2];
+  const p = P.novaPlanilha('Saída por produto', 'FF5B3CC4'); p.larguras = [70, 16, 11, 10, 14, 16, 12]; p.congelar = [0, 2];
   p.linhas.push([P.cel('Saída de produtos ' + per + ' (' + R.peds.length + ' pedidos)', nb)]);
-  p.linhas.push(['Produto', 'EAN', 'Unidades', 'Pedidos', 'Média por pedido', 'Última saída'].map(t => P.cel(t, cab)));
-  R.lista.forEach(a => p.linhas.push([P.cel(a.n, c), P.cel(a.e, c), P.cel(a.un, c), P.cel(a.peds.size, c), P.cel(Math.round(10 * a.un / a.peds.size) / 10, c), P.cel(diaHora(a.ult), c)]));
+  p.linhas.push(['Produto', 'EAN', 'Unidades', 'Pedidos', 'Média por pedido', 'Última saída', 'Alerta'].map(t => P.cel(t, cab)));
+  R.lista.forEach(a => p.linhas.push([P.cel(a.n, c), P.cel(a.e, c), P.cel(a.un, c), P.cel(a.peds.size, c), P.cel(Math.round(10 * a.un / a.peds.size) / 10, c), P.cel(diaHora(a.ult), c), P.cel(a.alerta ? 'saída alta' : '', c)]));
   const pd = P.novaPlanilha('Pedidos', 'FF16856A'); pd.larguras = [12, 16, 70, 8, 16]; pd.congelar = [0, 1];
   pd.linhas.push(['Pedido', 'EAN', 'Produto', 'Qtd.', 'Descritivo'].map(t => P.cel(t, cab)));
   R.peds.forEach(r => (r.itens || []).forEach(i => pd.linhas.push([P.cel(Number(r.id), c), P.cel(i.e, c), P.cel(i.n, c), P.cel(i.q, c), P.cel(diaHora(tSaida(r)), c)])));
@@ -602,7 +625,7 @@ $('cXlsx').onclick = () => {
     rs.linhas.push([]); rs.linhas.push([P.cel('Saída ' + per, nb), P.cel(R.peds.length + ' pedidos', c), P.cel(R.lista.reduce((s, a) => s + a.un, 0) + ' unidades', c), P.cel(R.lista.length + ' produtos', c)]);
     const rc = P.novaPlanilha('Recusas', 'FFB3261E'); rc.larguras = [70, 16, 18, 36, 18, 12, 16, 10, 16]; rc.congelar = [0, 1];
     rc.linhas.push(['Produto', 'EAN', 'Marca', 'Motivo (Hubii)', 'Ação sugerida', 'Qtd. recusada', 'Valor perdido (R$)', '% da perda', 'Saiu no período (un.)'].map(t => P.cel(t, cab)));
-    recs.filter(r => { const fa = $('cAcao').value; return !fa || (fa === 'cruz' ? saiu.has(r.e) : r.acao === fa); }).sort((a, b) => (b.v || 0) - (a.v || 0)).forEach(r => rc.linhas.push([P.cel(r.n, c), P.cel(r.e, c), P.cel(r.marca, c), P.cel(r.motivo, c), P.cel(r.acao, c), P.cel(r.q, c), P.cel(r.v, est.get({ borda: true, fmt: '#,##0.00' })), P.cel(r.pct != null ? r.pct / 100 : null, est.get({ borda: true, fmt: '0.0%' })), P.cel(saiu.get(r.e) || null, c)]));
+    recs.filter(r => { const fa = $('cAcao').value; return !fa || (fa === 'cruz' || fa === 'alerta' ? saiu.has(r.e) : r.acao === fa); }).sort((a, b) => (b.v || 0) - (a.v || 0)).forEach(r => rc.linhas.push([P.cel(r.n, c), P.cel(r.e, c), P.cel(r.marca, c), P.cel(r.motivo, c), P.cel(r.acao, c), P.cel(r.q, c), P.cel(r.v, est.get({ borda: true, fmt: '#,##0.00' })), P.cel(r.pct != null ? r.pct / 100 : null, est.get({ borda: true, fmt: '0.0%' })), P.cel(saiu.get(r.e) || null, c)]));
     planilhas.unshift(rs); planilhas.push(rc);
   }
   P.baixar('Compra-continua-' + carimbo() + '.xlsx', P.empacotar({ planilhas, est }));
@@ -760,6 +783,19 @@ $('atVoltar').onclick = async () => {
     aposAtualizar(m, r.versao);
   } catch (e) { m.textContent = 'Não deu certo: ' + e.message; }
 };
+
+// ---------- alerta de saída na aba Hoje (últimos 7 dias; recalcula a cada 10 minutos)
+let ALERTA_HOJE = null;
+async function atualizarAlertaHoje() {
+  try {
+    await carregarHist();
+    const S = somarSaida(inicioDias(7), Date.now());
+    const l = S.todos.filter(a => a.alerta).sort((a, b) => b.un - a.un);
+    ALERTA_HOJE = { n: l.length, lim: S.cfg.lim, top: l.slice(0, 3).map(a => (a.n || a.e).slice(0, 48) + ' (' + a.un + ' un.)') };
+  } catch (e) {}
+}
+setTimeout(atualizarAlertaHoje, 3000);
+setInterval(atualizarAlertaHoje, 10 * 60000);
 
 // ---------- atualização pela internet
 let ONLINE = null;
