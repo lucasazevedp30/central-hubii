@@ -119,7 +119,7 @@ const regiaoTabela = () => {
   if (!h) return null;
   const hr = h.getBoundingClientRect();
   const ac = fo.find(e => nt(txt(e)) === 'aceito em');
-  return { esq: hr.left - 12, dir: ac ? ac.getBoundingClientRect().left : hr.left + 300, topo: hr.bottom - 4 };
+  return { esq: hr.left - 12, dir: ac ? ac.getBoundingClientRect().left : hr.left + 300, topo: hr.bottom - 4, cab: h };
 };
 const linhasBrutas = () => {
   const reg = regiaoTabela();
@@ -127,7 +127,9 @@ const linhasBrutas = () => {
   if (reg) f = f.filter(e => { const r = e.getBoundingClientRect(); return r.left >= reg.esq && r.left < reg.dir && r.top >= reg.topo; });
   return f.map(el => {
     let r = el;
-    while (r.parentElement && r.parentElement.getBoundingClientRect().height <= 130 && f.filter(x => r.parentElement.contains(x)).length === 1) r = r.parentElement;
+    // sobe até a linha inteira do pedido (de qualquer altura: pedidos com vários produtos têm linhas altas),
+    // parando antes de juntar outro pedido ou o cabeçalho da tabela
+    while (r.parentElement && r.parentElement !== document.body && !(reg && r.parentElement.contains(reg.cab)) && r.parentElement.getBoundingClientRect().height <= 1500 && f.filter(x => r.parentElement.contains(x)).length === 1) r = r.parentElement;
     return { id: el.textContent.trim().replace('#', ''), el, status: nt(txt(r)) };
   });
 };
@@ -219,9 +221,14 @@ const percorrer = async fn => {
   }
   return null;
 };
+let ignoradasStatus = [];   // linhas lidas na última varredura cujo status não bateu com o filtro (para o aviso)
 const varrerPaginas = async () => {
-  const ids = [];
-  await percorrer(() => { lerLista().forEach(p => { if (!ids.includes(p.id)) ids.push(p.id); }); return null; });
+  const ids = []; ignoradasStatus = [];
+  await percorrer(() => {
+    lerLista().forEach(p => { if (!ids.includes(p.id)) ids.push(p.id); });
+    if (!TODOS && MODO.status) linhasBrutas().forEach(p => { if (!p.status.includes(MODO.status) && !ignoradasStatus.includes(p.id)) ignoradasStatus.push(p.id); });
+    return null;
+  });
   if (pagControles().length >= 2) await paraPrimeira();
   return ids;
 };
@@ -498,6 +505,7 @@ async function rodarEtiquetas() {
   const infosDe = d => {
     const i = ['Memória dos descritivos: ' + d.memoria + ' pedido(s) gravados nas últimas 72h.'];
     if (!d.memoria) i.push('ATENÇÃO: não há memória de descritivos. Nenhum pedido está marcado; marque à mão os que quiser imprimir.');
+    if (ignoradasStatus.length) i.push('Linhas da tela que eu NÃO reconheci como "Esperando Expedição" (ficaram de fora): ' + ignoradasStatus.length + ' (' + ignoradasStatus.slice(0, 6).map(x => '#' + x).join(', ') + (ignoradasStatus.length > 6 ? '...' : '') + '). Se elas estão em Esperando Expedição no Hubii, me mande um print de uma dessas linhas.');
     if (d.naoApareceu.length) i.push('Na memória, mas ainda NÃO estão em "Esperando Expedição" (aguardando a NFe): ' + d.naoApareceu.length + ' (' + d.naoApareceu.slice(0, 6).map(x => '#' + x).join(', ') + (d.naoApareceu.length > 6 ? '...' : '') + '). Quando liberarem, rode de novo.');
     return i;
   };
