@@ -249,25 +249,21 @@ const naLista = async id => {
 // A tela do Hubii pede a lista a papi.hubii.co/v2/hubs/<loja>/orders ordenada por prazo (next_sla). Com prazos iguais,
 // a paginação da tela repete uns pedidos e esconde outros. Aqui a Central pede a mesma lista (com o login do navegador),
 // tenta ordenações estáveis e só aceita o resultado se o número de pedidos diferentes bater com o total do servidor.
-const urlApiLista = () => {
-  try {
-    const es = performance.getEntriesByType('resource').map(e => e.name).filter(u => /^https:\/\/papi\.hubii\.co\/v2\/hubs\/[0-9a-f-]{36}\/orders\?/i.test(u));
-    return es.length ? new URL(es[es.length - 1]) : null;
-  } catch (e) { return null; }
-};
+// o pedido ao servidor é feito pelo hook-lista.js, dentro da página, repetindo o pedido da própria tela (mesmas credenciais)
+let nPedido = 0;
+const pedirLista = params => new Promise((ok, falha) => {
+  const n = ++nPedido;
+  const fim = setTimeout(() => { window.removeEventListener('message', ouvir); falha(new Error('sem resposta do Hubii em 40 s')); }, 40000);
+  function ouvir(ev) {
+    const d = ev.data; if (ev.source !== window || !d || d.central !== 'lista-resp' || d.n !== n) return;
+    clearTimeout(fim); window.removeEventListener('message', ouvir);
+    if (d.ok) ok(d.json); else falha(new Error(d.erro || 'erro'));
+  }
+  window.addEventListener('message', ouvir);
+  window.postMessage({ central: 'lista-pedir', n, params }, '*');
+});
 async function lerApi(statusRotulo) {
-  const base = urlApiLista();
-  if (!base) return { ok: false, motivo: 'não achei o endereço da lista do Hubii' };
-  const pedir = async (ordem, pag, por) => {
-    const u = new URL(base.toString());
-    u.searchParams.set('expedition_type', 'drop_off');
-    u.searchParams.set('delivery_status_str', JSON.stringify([statusRotulo]));
-    u.searchParams.set('order_by', ordem); u.searchParams.set('order_direction', 'asc');
-    u.searchParams.set('page', String(pag)); u.searchParams.set('per_page', String(por));
-    const r = await fetch(u.toString(), { credentials: 'include', headers: { Accept: 'application/json' } });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    return r.json();
-  };
+  const pedir = (ordem, pag, por) => pedirLista({ expedition_type: 'drop_off', delivery_status_str: JSON.stringify([statusRotulo]), order_by: ordem, order_direction: 'asc', page: pag, per_page: por });
   const alvo = nt(statusRotulo); let ultimo = '';
   for (const [ordem, por] of [['next_sla', 500], ['order_id', 100], ['accepted_at', 100], ['next_sla', 100]]) {
     try {
@@ -287,7 +283,8 @@ async function lerApi(statusRotulo) {
   }
   return { ok: false, motivo: ultimo };
 }
-let usouApi = null;   // resultado da última leitura (para o aviso na conferência)
+let usouApi = null;
+let achadosNaBusca = [];   // pedidos da memória achados só pela busca (o Hubii escondia das páginas)   // resultado da última leitura (para o aviso na conferência)
 // lista de pedidos: primeiro pelo servidor; se não der, lê a tela página por página
 async function lerPedidosDoStatus() {
   const r = await lerApi(MODO.marcar === 'esperando expedicao' ? 'Esperando Expedição' : 'Esperando NFe do Hub');
@@ -549,6 +546,17 @@ async function levantarEtiquetas(reimprimir) {
   const lp = await lerPedidosDoStatus(); const tela = lp.ids;
   const total = lp.total;
   const fila = filaLer(); const filaIds = fila.map(x => x.id); const hs = histSet();
+  // sem a lista do servidor: os pedidos da memória que não apareceram nas páginas são procurados um a um pela busca
+  achadosNaBusca = [];
+  const sumidos = filaIds.filter(id => !tela.includes(id) && !hs.has(id));
+  if (!(usouApi && usouApi.ok) && sumidos.length && sumidos.length <= 80 && await esperar(campoBuscaH, 5)) {
+    for (let i = 0; i < sumidos.length; i++) {
+      const id = sumidos[i]; log('Procurando pela busca os que não apareceram nas páginas: ' + (i + 1) + ' de ' + sumidos.length + ' (#' + id + ')...');
+      setBuscaH(campoBuscaH(), id); await sleep(1800);
+      if (await esperar(() => lerLista().find(x => x.id === id), 6)) { tela.push(id); achadosNaBusca.push(id); }
+    }
+    limparBusca(); await sleep(1500); await esperar(() => lerLista().length > 0, 10);
+  }
   const noFila = filaIds.filter(id => tela.includes(id));
   const fora = tela.filter(id => !filaIds.includes(id));
   const horaDe = id => { const x = fila.find(f => f.id === id); return x && x.t ? hora(x.t) : '?'; };
@@ -569,7 +577,9 @@ async function rodarEtiquetas() {
   const dados = await levantarEtiquetas();
   if (!dados.itens.length) { fimCaixa('Não li nenhum pedido em "Esperando Expedição". Nada a fazer.'); return; }
   const infosDe = d => {
-    const i = [fonteLista(), 'Memória dos descritivos: ' + d.memoria + ' pedido(s) gravados nas últimas 72h.'];
+    const i = [fonteLista()];
+    if (achadosNaBusca.length) i.push('Achados pela busca do Hubii (estavam escondidos das páginas): ' + achadosNaBusca.length + ' pedido(s). Eles entram na ordem normal dos descritivos.');
+    i.push('Memória dos descritivos: ' + d.memoria + ' pedido(s) gravados nas últimas 72h.');
     if (!d.memoria) i.push('ATENÇÃO: não há memória de descritivos. Nenhum pedido está marcado; marque à mão os que quiser imprimir.');
     if (ignoradasStatus.length) i.push('Linhas da tela que eu NÃO reconheci como "Esperando Expedição" (ficaram de fora): ' + ignoradasStatus.length + ' (' + ignoradasStatus.slice(0, 6).map(x => '#' + x).join(', ') + (ignoradasStatus.length > 6 ? '...' : '') + '). Se elas estão em Esperando Expedição no Hubii, me mande um print de uma dessas linhas.');
     if (d.naoApareceu.length) i.push('Na memória, mas ainda NÃO estão em "Esperando Expedição" (aguardando a NFe): ' + d.naoApareceu.length + ' (' + d.naoApareceu.slice(0, 6).map(x => '#' + x).join(', ') + (d.naoApareceu.length > 6 ? '...' : '') + '). Quando liberarem, rode de novo.');

@@ -45,7 +45,10 @@ extensão (apaga os dados); recarregar sempre da mesma pasta.
   `["Esperando Expedição"]`), `expedition_type=drop_off`; resposta `{data:[{order_id, order_uuid, delivery_status_str,
   ...}], total, total_pages}`, sem dados pessoais). Com prazos iguais a paginação por `next_sla` repete e esconde
   pedidos (16/11: 173 de 201). Desde a 2.17.0 o `content.js` lê por essa API (`lerApi`, tenta ordenações estáveis e
-  só aceita se bater com `total`) e abre pedidos escondidos pela busca (`acharPedido`).
+  só aceita se bater com `total`) e abre pedidos escondidos pela busca (`acharPedido`). Um `fetch` direto do content
+  script falhou no Hubii real ("Failed to fetch"): desde a 2.17.1 o pedido é repetido por `hook-lista.js` (mundo MAIN),
+  que copia o pedido da própria tela (cabeçalhos/credenciais). Sem servidor, os pedidos da memória que sumiram das
+  páginas são procurados um a um pela busca.
 
 ## Como entregar uma versão nova
 1. Aumentar a versão em `hubii-pacote/extensao-central-hubii/manifest.json` e no rótulo
