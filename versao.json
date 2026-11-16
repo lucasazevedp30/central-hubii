@@ -1,8 +1,8 @@
 {
-  "versao": "2.16.2",
-  "arquivo": "versoes/hubii-central-2.16.2.zip",
-  "sha256": "f3980bd2e7df29a9f992bc07296ae6c4675ae92211a85097aba13c3f126be433",
-  "tamanho": 977135,
-  "data": "2026-11-16T00:45:53Z",
-  "novidades": "- Atualização pela internet: o painel avisa na aba Hoje quando há versão nova; é só clicar em \"Instalar a versão nova\".\n- O pacote baixado é conferido (SHA-256) antes de instalar; se não conferir, nada muda.\n- O botão antigo continua: \"Instalar de um arquivo .zip\"."
+  "versao": "2.16.3",
+  "arquivo": "versoes/hubii-central-2.16.3.zip",
+  "sha256": "44724999c7102fd1183d8f3d0dd842f03f0437380cafdbbb72f964bc45e1cb21",
+  "tamanho": 977325,
+  "data": "2026-11-16T12:32:03Z",
+  "novidades": "- Coletar pendências, Verificar no Hubii e OneHub e Dar baixa agora abrem no Chrome da Central (o mesmo das impressões).\n- O Chrome do pessoal não é mais fechado nem reaberto por essas rotinas.\n- Na primeira vez, entre no OnePet e no OneHub dentro do Chrome da Central; ele lembra o login.\n- Rode \"Coletar pendências\" de novo antes de verificar: a coleta antiga ficou guardada no outro Chrome."
 }
