@@ -14,7 +14,7 @@ ZIP=dist/hubii-central-$V.zip
 rm -f "$ZIP" "$ZIP.sha256"
 zip -qr "$ZIP" hubii-pacote -x 'hubii-pacote/*\\*'
 (cd dist && sha256sum "hubii-central-$V.zip" > "hubii-central-$V.zip.sha256")
-git tag -a "v$V" -m "Central Hubii $V" 2>/dev/null || true
-git push origin HEAD "v$V"
-gh release create "v$V" "$ZIP" "$ZIP.sha256" --repo "$REPO" --title "Central Hubii $V" --notes-file "$NOTAS"
+git push origin HEAD:main
+# a etiqueta vX.Y.Z e criada pelo proprio GitHub junto com a release (no commit enviado acima)
+gh release create "v$V" "$ZIP" "$ZIP.sha256" --repo "$REPO" --target "$(git rev-parse HEAD)" --title "Central Hubii $V" --notes-file "$NOTAS"
 echo "Publicado: v$V"
