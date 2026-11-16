@@ -1,8 +1,8 @@
 {
-  "versao": "2.17.3",
-  "arquivo": "versoes/hubii-central-2.17.3.zip",
-  "sha256": "0c22dc201b23d45d6a6f07512b0035dc7932fe165fccbd4cd01b500e22398ab8",
-  "tamanho": 982031,
-  "data": "2026-11-16T18:14:46Z",
-  "novidades": "- Conferir despacho (bipar) e Ler códigos BR agora também leem a lista completa pelo servidor do Hubii (antes: 173 de 201).\n- Se o servidor falhar, os pedidos com etiqueta impressa que o Hubii esconde das páginas são procurados um a um pela busca.\n- A conferência mostra quantos pedidos leu ao lado do total da tela."
+  "versao": "2.17.4",
+  "arquivo": "versoes/hubii-central-2.17.4.zip",
+  "sha256": "7eafaebf4ea06453731bb3f48577e6650e241bf26b1344e47472a6c5653da51f",
+  "tamanho": 983662,
+  "data": "2026-11-16T19:26:04Z",
+  "novidades": "- Procurar pedido pelo EAN: lê a lista completa da aba Despacho pelo servidor do Hubii e responde primeiro pelo Histórico de pedidos; só abre no Hubii os pedidos ainda sem produtos anotados (bem mais rápido).\n- Alerta de saída na Compra contínua: produtos que saíram a partir de um limite (padrão 10 un.) ganham a etiqueta \"saída alta\". Marcas sem alerta: Royal Canin e Premier (dá para mudar).\n- Aviso na aba Hoje com os produtos de saída alta dos últimos 7 dias, e coluna \"Alerta\" na planilha da compra."
 }
