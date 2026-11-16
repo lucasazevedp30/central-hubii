@@ -40,6 +40,12 @@ extensão (apaga os dados); recarregar sempre da mesma pasta.
   `.js` e `manifest.json` **sem BOM**. Perfil "Profile 3" tem espaço: vai entre aspas nos argumentos.
 - Chrome no lugar padrão, senão Program Files (x86), `%LOCALAPPDATA%`, e por último o Brave.
 - Todo POST do painel exige o cabeçalho `X-Central: 1`.
+- Lista de pedidos do Hubii: a tela chama `GET https://papi.hubii.co/v2/hubs/{hub_uuid}/orders` (cookie de sessão;
+  parâmetros `page`, `per_page` (100), `order_by` (`next_sla`), `order_direction`, `delivery_status_str` (JSON, ex.
+  `["Esperando Expedição"]`), `expedition_type=drop_off`; resposta `{data:[{order_id, order_uuid, delivery_status_str,
+  ...}], total, total_pages}`, sem dados pessoais). Com prazos iguais a paginação por `next_sla` repete e esconde
+  pedidos (16/11: 173 de 201). Desde a 2.17.0 o `content.js` lê por essa API (`lerApi`, tenta ordenações estáveis e
+  só aceita se bater com `total`) e abre pedidos escondidos pela busca (`acharPedido`).
 
 ## Como entregar uma versão nova
 1. Aumentar a versão em `hubii-pacote/extensao-central-hubii/manifest.json` e no rótulo

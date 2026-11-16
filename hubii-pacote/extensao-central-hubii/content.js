@@ -245,13 +245,79 @@ const naLista = async id => {
   return p;
 };
 
+// ---------- lista completa direto do servidor do Hubii ----------
+// A tela do Hubii pede a lista a papi.hubii.co/v2/hubs/<loja>/orders ordenada por prazo (next_sla). Com prazos iguais,
+// a paginação da tela repete uns pedidos e esconde outros. Aqui a Central pede a mesma lista (com o login do navegador),
+// tenta ordenações estáveis e só aceita o resultado se o número de pedidos diferentes bater com o total do servidor.
+const urlApiLista = () => {
+  try {
+    const es = performance.getEntriesByType('resource').map(e => e.name).filter(u => /^https:\/\/papi\.hubii\.co\/v2\/hubs\/[0-9a-f-]{36}\/orders\?/i.test(u));
+    return es.length ? new URL(es[es.length - 1]) : null;
+  } catch (e) { return null; }
+};
+async function lerApi(statusRotulo) {
+  const base = urlApiLista();
+  if (!base) return { ok: false, motivo: 'não achei o endereço da lista do Hubii' };
+  const pedir = async (ordem, pag, por) => {
+    const u = new URL(base.toString());
+    u.searchParams.set('expedition_type', 'drop_off');
+    u.searchParams.set('delivery_status_str', JSON.stringify([statusRotulo]));
+    u.searchParams.set('order_by', ordem); u.searchParams.set('order_direction', 'asc');
+    u.searchParams.set('page', String(pag)); u.searchParams.set('per_page', String(por));
+    const r = await fetch(u.toString(), { credentials: 'include', headers: { Accept: 'application/json' } });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  };
+  const alvo = nt(statusRotulo); let ultimo = '';
+  for (const [ordem, por] of [['next_sla', 500], ['order_id', 100], ['accepted_at', 100], ['next_sla', 100]]) {
+    try {
+      const ids = []; let total = null, paginas = 1;
+      for (let pag = 1; pag <= paginas && pag <= 60; pag++) {
+        const j = await pedir(ordem, pag, por);
+        if (!j || !Array.isArray(j.data)) throw new Error('resposta sem lista');
+        total = Number(j.total); paginas = Number(j.total_pages) || 1;
+        j.data.forEach(o => {
+          const id = String(o.order_id || '');
+          if (/^\d{5,9}$/.test(id) && nt(o.delivery_status_str) === alvo && (!o.expedition_type || o.expedition_type === 'drop_off') && !ids.includes(id)) ids.push(id);
+        });
+      }
+      if (Number.isFinite(total) && ids.length === total) return { ok: true, ids, total, ordem };
+      ultimo = 'li ' + ids.length + ' de ' + total + ' (ordem ' + ordem + ')';
+    } catch (e) { ultimo = e.message + ' (ordem ' + ordem + ')'; }
+  }
+  return { ok: false, motivo: ultimo };
+}
+let usouApi = null;   // resultado da última leitura (para o aviso na conferência)
+// lista de pedidos: primeiro pelo servidor; se não der, lê a tela página por página
+async function lerPedidosDoStatus() {
+  const r = await lerApi(MODO.marcar === 'esperando expedicao' ? 'Esperando Expedição' : 'Esperando NFe do Hub');
+  usouApi = r;
+  if (r.ok) { log('Lista lida direto do Hubii: ' + r.ids.length + ' pedido(s).'); return { ids: r.ids, total: r.total }; }
+  log('Não deu para ler a lista direto do Hubii (' + r.motivo + '); lendo a tela página por página.');
+  const ids = await varrerPaginas();
+  return { ids, total: totalNaTela() };
+}
+// acha a linha do pedido na lista; se o Hubii esconder o pedido das páginas, procura pelo número na busca
+const fonteLista = () => usouApi && usouApi.ok ? 'Lista lida direto do servidor do Hubii (todos os ' + usouApi.total + ' pedidos, sem depender das páginas da tela).' : 'Lista lida da tela, página por página' + (usouApi ? ' (o servidor do Hubii não respondeu: ' + usouApi.motivo + ')' : '') + '.';
+async function acharPedido(id) {
+  let p = lerLista().find(x => x.id === id); if (p) return p;
+  const c = campoBuscaH();
+  if (c && c.value) { setBuscaH(c, ''); await sleep(1500); await esperar(() => lerLista().length > 0, 10); }
+  p = await naLista(id); if (p) return p;
+  const c2 = await esperar(campoBuscaH, 10); if (!c2) return null;
+  log('#' + id + ': não aparece nas páginas da lista; procurando pelo número na busca do Hubii...');
+  setBuscaH(c2, id); await sleep(2200);
+  return await esperar(() => lerLista().find(x => x.id === id), 8);
+}
+const limparBusca = () => { try { const c = campoBuscaH(); if (c && c.value) setBuscaH(c, ''); } catch (e) {} };
+
 // abre o pedido clicando na linha; se abrir outro pedido ou nada, volta para a lista e tenta de novo (até 3 vezes)
 const abrirPedido = async (id, alvo) => {
   for (let t = 1; t <= 3; t++) {
     if (t > 1) {
       if (estaNoDetalhe()) { const v = botao('voltar'); if (v) v.click(); await esperar(() => !estaNoDetalhe(), 15); }
       await esperar(() => lerLista().length > 0, 20); await sleep(1500);
-      alvo = await naLista(id);
+      alvo = await acharPedido(id);
       if (!alvo) { log('#' + id + ': não achei mais na lista ao tentar de novo.'); return false; }
     }
     alvo.el.click();
@@ -410,8 +476,8 @@ function janelaLista(cfg) {
 
 /* ---------- Descritivos ---------- */
 async function levantarDescritivos() {
-  const tela = await varrerPaginas();
-  const total = totalNaTela();
+  const lp = await lerPedidosDoStatus(); const tela = lp.ids;
+  const total = lp.total;
   const fat = fatLer(); const fila = filaLer(); const filaIds = new Set(fila.map(x => x.id));
   const itens = tela.map(id => {
     if (id in fat) return { id, nota: 'faturado há pouco (ainda aguardando a NFe do Hub): não repetir', estado: 'cinza', marcado: false };
@@ -434,7 +500,7 @@ async function rodarDescritivos() {
     titulo: 'Descritivos: conferir antes de faturar', rotulo: MODO.rotulo,
     subtitulo: 'Nada foi faturado ainda. Confira se esta lista é igual à da tela; ao confirmar, cada pedido é faturado e o descritivo sai na MP-4200 TH, nesta ordem.',
     tela: dados.tela, totalTela: dados.totalTela, itens: dados.itens,
-    infos: ['Faturar emite nota fiscal e não dá para desfazer. Ao confirmar, estes pedidos entram na memória que a rotina de Etiquetas vai usar, na mesma ordem.'],
+    infos: [fonteLista(), 'Faturar emite nota fiscal e não dá para desfazer. Ao confirmar, estes pedidos entram na memória que a rotina de Etiquetas vai usar, na mesma ordem.'],
     verbo: n => 'Confirmar e faturar ' + n + ' pedido(s)', aviso: 'Faturar emite nota fiscal e não dá para desfazer.',
     reler: async () => { try { return await levantarDescritivos(); } catch (e) { return null; } }
   });
@@ -452,7 +518,7 @@ async function rodarDescritivos() {
       const id = ids[i];
       prog(feitos.length + pulados.length, ids.length, '#' + id, 'Descritivos: faturando e imprimindo');
       log('Abrindo #' + id + '...');
-      const alvo = await naLista(id);
+      const alvo = await acharPedido(id);
       if (!alvo) { pulados.push(id); prog(feitos.length + pulados.length, ids.length, '#' + id); log('#' + id + ' não está mais na lista; pulei.'); continue; }
             if (!await abrirPedido(id, alvo)) { log('Não consegui abrir #' + id + '. Parando.'); break; }
       await sleep(1500);
@@ -470,7 +536,7 @@ async function rodarDescritivos() {
       v.click(); await esperar(() => !estaNoDetalhe(), 15); await esperar(() => lerLista().length > 0 || linhasBrutas().length === 0, 20); await sleep(1500);
     }
   } catch (e) { console.error(e); log('Erro inesperado: ' + e.message); }
-  rodando = false;
+  rodando = false; limparBusca();
   const dTot = Date.now() - T0;
   if (feitos.length || pulados.length) reg('descritivos', T0, { n: feitos.length, pul: pulados.length, evit, parado: parar });
   const rel = 'Descritivos faturados e enviados (' + feitos.length + '): ' + feitos.join(' ') + (pulados.length ? '\nPulados: ' + pulados.join(' ') : '');
@@ -480,8 +546,8 @@ async function rodarDescritivos() {
 
 /* ---------- Etiquetas ---------- */
 async function levantarEtiquetas(reimprimir) {
-  const tela = await varrerPaginas();
-  const total = totalNaTela();
+  const lp = await lerPedidosDoStatus(); const tela = lp.ids;
+  const total = lp.total;
   const fila = filaLer(); const filaIds = fila.map(x => x.id); const hs = histSet();
   const noFila = filaIds.filter(id => tela.includes(id));
   const fora = tela.filter(id => !filaIds.includes(id));
@@ -503,7 +569,7 @@ async function rodarEtiquetas() {
   const dados = await levantarEtiquetas();
   if (!dados.itens.length) { fimCaixa('Não li nenhum pedido em "Esperando Expedição". Nada a fazer.'); return; }
   const infosDe = d => {
-    const i = ['Memória dos descritivos: ' + d.memoria + ' pedido(s) gravados nas últimas 72h.'];
+    const i = [fonteLista(), 'Memória dos descritivos: ' + d.memoria + ' pedido(s) gravados nas últimas 72h.'];
     if (!d.memoria) i.push('ATENÇÃO: não há memória de descritivos. Nenhum pedido está marcado; marque à mão os que quiser imprimir.');
     if (ignoradasStatus.length) i.push('Linhas da tela que eu NÃO reconheci como "Esperando Expedição" (ficaram de fora): ' + ignoradasStatus.length + ' (' + ignoradasStatus.slice(0, 6).map(x => '#' + x).join(', ') + (ignoradasStatus.length > 6 ? '...' : '') + '). Se elas estão em Esperando Expedição no Hubii, me mande um print de uma dessas linhas.');
     if (d.naoApareceu.length) i.push('Na memória, mas ainda NÃO estão em "Esperando Expedição" (aguardando a NFe): ' + d.naoApareceu.length + ' (' + d.naoApareceu.slice(0, 6).map(x => '#' + x).join(', ') + (d.naoApareceu.length > 6 ? '...' : '') + '). Quando liberarem, rode de novo.');
@@ -529,8 +595,8 @@ async function rodarEtiquetas() {
       const id = ids[i];
       prog(feitos.length, ids.length, '#' + id, 'Etiquetas: imprimindo em ordem');
       log('Procurando #' + id + ' nas páginas...');
-      const alvo = await naLista(id);
-      if (!alvo) { log('#' + id + ' (próximo da ordem) não está na lista, em nenhuma página. Parei para manter a ordem.'); break; }
+      const alvo = await acharPedido(id);
+      if (!alvo) { log('#' + id + ' (próximo da ordem) não está na lista nem na busca do Hubii. Parei para manter a ordem.'); break; }
             if (!await abrirPedido(id, alvo)) { log('Não consegui abrir #' + id + '. Parando.'); break; }
       await sleep(1500);
       const et = await esperar(() => { const b = botao('imprimir etiqueta'); return b && !b.disabled ? b : null; }, ESPERA_MIN * 60);
@@ -552,7 +618,7 @@ async function rodarEtiquetas() {
       v.click(); await esperar(() => !estaNoDetalhe(), 15); await esperar(() => lerLista().length > 0, 20); await sleep(1500);
     }
   } catch (e) { console.error(e); log('Erro inesperado: ' + e.message); }
-  rodando = false;
+  rodando = false; limparBusca();
   const dTot = Date.now() - T0;
   if (feitos.length) reg('etiquetas', T0, { n: feitos.length, pul: 0, evit, parado: parar || ids.length > feitos.length });
   const faltam = ids.filter(x => !feitos.includes(x));
