@@ -277,19 +277,22 @@ function Rodar($arquivo) {
     Start-Process -FilePath $p -WorkingDirectory $dir
     return @{ ok = $true; msg = "Abrindo $arquivo..." }
 }
-function ChromeSegundoPlano($url, [bool]$confirmado, [bool]$semFechar) {
+# Coletar, Verificar e Baixa abrem no Chrome da Central (o mesmo das impressoes), que ja roda no "modo segundo plano".
+# Assim o Chrome do pessoal nunca e fechado nem precisa ser reaberto.
+$raizCentral = Join-Path $env:LOCALAPPDATA 'CentralHubiiChrome'
+function ChromeCentral([string[]]$urls, [string]$oque) {
     if (-not (Test-Path $chrome)) { return @{ ok = $false; msg = 'Navegador nao encontrado (nem Chrome nem Brave).' } }
-    $nome = if ($chrome -like '*brave*') { 'Brave' } else { 'Chrome' }
-    $flags = @("--profile-directory=`"$perfil`"", '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--disable-features=CalculateNativeWinOcclusion', '--new-window', $url)
-    $aux = Join-Path $dir 'navegador-normal.ps1'
-    & $aux -Acao Estado; $estado = $LASTEXITCODE
-    if ($estado -eq 3 -and -not $semFechar) {
-        if (-not $confirmado) { return @{ ok = $false; alternativa = $true; confirmar = "O $nome normal esta aberto no modo comum. Para a rotina continuar mesmo com a janela coberta ou minimizada, ele precisa ser fechado e reaberto (so o $nome normal; o da Central nao e mexido). Fechar e reabrir agora?" } }
-        & $aux -Acao Fechar
+    if (-not (Test-Path (Join-Path $raizCentral 'Default\Preferences'))) { return @{ ok = $false; msg = 'O Chrome da Central ainda nao foi preparado neste computador. Clique uma vez em Imprimir descritivos (ele mostra o passo a passo da primeira vez) e depois tente de novo.' } }
+    $aberto = $false
+    try { $aberto = [bool](@(Get-CimInstance Win32_Process -Filter "Name='chrome.exe' OR Name='brave.exe'" -ErrorAction Stop | Where-Object { $_.CommandLine -like '*CentralHubiiChrome*' }).Count) } catch { }
+    # as mesmas opcoes do Descritivos.bat (so valem quando o Chrome da Central e aberto agora; se ja estava aberto, ele ja tem)
+    $args0 = @("--user-data-dir=`"$raizCentral`"", '--profile-directory=Default', '--kiosk-printing', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding', '--disable-background-timer-throttling', '--disable-features=CalculateNativeWinOcclusion', '--no-first-run', '--no-default-browser-check', '--hide-crash-restore-bubble')
+    $n = 0
+    foreach ($u in $urls) {
+        if ($n -gt 0) { Start-Sleep -Seconds $(if ($aberto) { 1 } else { 3 }) }
+        Start-Process -FilePath $chrome -ArgumentList ($args0 + @('--new-window', $u)); $n++
     }
-    Start-Process -FilePath $chrome -ArgumentList $flags
-    if ($estado -eq 3 -and $semFechar) { return @{ ok = $true; msg = "Abrindo no $nome que ja estava aberto. Deixe a janela a vista enquanto a rotina roda." } }
-    return @{ ok = $true; msg = "Abrindo o OnePet no $nome..." }
+    return @{ ok = $true; msg = "Abrindo $oque no Chrome da Central (o Chrome do pessoal nao e mexido). Se pedir login, entre uma vez: ele lembra." }
 }
 
 function Acao($a, [bool]$confirmado, $dados) {
@@ -299,9 +302,9 @@ function Acao($a, [bool]$confirmado, $dados) {
         'reimprimir'  { return (Rodar 'Reimprimir-Descritivos.bat') }
         'voltarmp'    { $cache.t = [datetime]::MinValue; return (Rodar 'Voltar-MP.bat') }
         'centralantiga' { return (Rodar 'Central-antiga.bat') }
-        'verificar'   { return (Rodar 'Pendencias.bat') }
-        'coletar'     { return (ChromeSegundoPlano ($urlPendencias + '&central=coletar') $confirmado ([bool]$dados.semFechar)) }
-        'baixa'       { return (ChromeSegundoPlano $urlPendencias $confirmado ([bool]$dados.semFechar)) }
+        'verificar'   { return (ChromeCentral @('https://hub.hubii.co/pedidos', 'https://onehub.onepet.com.br/onehub') 'o Hubii e o OneHub (uma janela cada)') }
+        'coletar'     { return (ChromeCentral @($urlPendencias + '&central=coletar') 'as Pendencias do OnePet') }
+        'baixa'       { return (ChromeCentral @($urlPendencias) 'as Pendencias do OnePet (Baixa Hubii)') }
         'extensoes'   { if (Test-Path $chrome) { Start-Process -FilePath $chrome -ArgumentList @("--profile-directory=`"$perfil`"", '--new-window', 'chrome://extensions') }; return @{ ok = $true; msg = 'Abrindo as extensoes do Chrome...' } }
         'abrirpedido' {
             $id = [string]$dados.id

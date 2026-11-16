@@ -8,10 +8,10 @@ if not exist "%CHROME%" if exist "%ProgramFiles%\BraveSoftware\Brave-Browser\App
 if not exist "%CHROME%" if exist "%ProgramFiles(x86)%\BraveSoftware\Brave-Browser\Application\brave.exe" set "CHROME=%ProgramFiles(x86)%\BraveSoftware\Brave-Browser\Application\brave.exe"
 if not exist "%CHROME%" if exist "%LOCALAPPDATA%\BraveSoftware\Brave-Browser\Application\brave.exe" set "CHROME=%LOCALAPPDATA%\BraveSoftware\Brave-Browser\Application\brave.exe"
 for %%I in ("%CHROME%") do set "NAVEXE=%%~nxI"
-set "PERFIL=Profile 3"
+set "RAIZ=%LOCALAPPDATA%\CentralHubiiChrome"
 set "URL=https://hub.hubii.co/pedidos"
 echo.
-echo === HUBII: PENDENCIAS (modo segundo plano) ===
+echo === HUBII: PENDENCIAS (no Chrome da Central) ===
 echo.
 if not exist "%CHROME%" (
   echo Chrome nao encontrado em: %CHROME%
@@ -19,19 +19,19 @@ if not exist "%CHROME%" (
   pause
   exit /b 1
 )
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0navegador-normal.ps1" -Acao Estado
-if errorlevel 3 (
-  echo O navegador normal esta aberto no modo comum. Para rodar em segundo plano ele precisa ser fechado e reaberto.
-  echo So o navegador normal e fechado; o da Central nao e mexido.
-  choice /c SN /m "Fechar e reabrir agora (N = abrir sem fechar e deixar a janela a vista)"
-  if not errorlevel 2 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0navegador-normal.ps1" -Acao Fechar
+if not exist "%RAIZ%\Default\Preferences" (
+  echo Este e o primeiro uso do Chrome da Central neste computador.
+  call "%~dp0Primeira-vez-Chrome-Central.bat"
+  exit /b 0
 )
-start "" "%CHROME%" --profile-directory="%PERFIL%" --disable-background-timer-throttling --disable-renderer-backgrounding --disable-backgrounding-occluded-windows --disable-features=CalculateNativeWinOcclusion --new-window "%URL%"
+rem Abre no Chrome da Central (ja roda em segundo plano). O Chrome do pessoal nao e mexido.
+set "OPC=--user-data-dir="%RAIZ%" --profile-directory=Default --kiosk-printing --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-background-timer-throttling --disable-features=CalculateNativeWinOcclusion --no-first-run --no-default-browser-check --hide-crash-restore-bubble"
+start "" "%CHROME%" %OPC% --new-window "%URL%"
 timeout /t 3 /nobreak >nul
-start "" "%CHROME%" --profile-directory="%PERFIL%" --new-window "https://onehub.onepet.com.br/onehub"
+start "" "%CHROME%" %OPC% --new-window "https://onehub.onepet.com.br/onehub"
 echo.
-echo Pronto. Este Chrome agora roda os favoritos em segundo plano (Coletar, Verificar e Consultar OneHub).
-echo Foram abertas DUAS JANELAS (Hubii e OneHub). Abra o OnePet em uma terceira janela.
-echo IMPORTANTE: use uma JANELA para cada site. Pode deixar uma janela atras da outra,
-echo mas nao minimize e nao troque de aba dentro da janela enquanto o script roda.
+echo Pronto. Foram abertas DUAS JANELAS no Chrome da Central (Hubii e OneHub).
+echo Se pedir login, entre uma vez: o Chrome da Central lembra.
+echo Use uma JANELA para cada site. Pode deixar uma janela atras da outra,
+echo mas nao minimize e nao troque de aba dentro da janela enquanto a rotina roda.
 timeout /t 10 >nul
