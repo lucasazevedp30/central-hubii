@@ -1,8 +1,8 @@
 {
-  "versao": "2.16.4",
-  "arquivo": "versoes/hubii-central-2.16.4.zip",
-  "sha256": "c8a76be988fb4e2e31db0c474d2658e4b011d2e1507cc6834bc9fb815c50d9fc",
-  "tamanho": 977444,
-  "data": "2026-11-16T13:33:55Z",
-  "novidades": "- Coletar pendências: se o Chrome da Central já estiver aberto, abre só uma aba nova nele (sem janela nova).\n- Enquanto a coleta roda, fique na aba dela: a coleta pausa se a aba ficar escondida."
+  "versao": "2.16.5",
+  "arquivo": "versoes/hubii-central-2.16.5.zip",
+  "sha256": "c02cc3cfcfb26e53fab6372f88dc65603a2b918c5f02aaaa701c638c8e2b6e37",
+  "tamanho": 978004,
+  "data": "2026-11-16T14:08:33Z",
+  "novidades": "- Correção: com listas grandes (muitas páginas), a Central pulava páginas e deixava pedidos de fora (ex.: leu 174 de 203). Agora ela passa página por página, em ordem, e confere se cada página abriu.\n- Vale para Descritivos, Etiquetas, Reimprimir e busca por EAN.\n- A memória do que já foi impresso continua igual depois de atualizar."
 }
