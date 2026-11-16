@@ -1,0 +1,8 @@
+{
+  "versao": "2.16.2",
+  "arquivo": "versoes/hubii-central-2.16.2.zip",
+  "sha256": "f3980bd2e7df29a9f992bc07296ae6c4675ae92211a85097aba13c3f126be433",
+  "tamanho": 977135,
+  "data": "2026-11-16T00:45:53Z",
+  "novidades": "- Atualização pela internet: o painel avisa na aba Hoje quando há versão nova; é só clicar em \"Instalar a versão nova\".\n- O pacote baixado é conferido (SHA-256) antes de instalar; se não conferir, nada muda.\n- O botão antigo continua: \"Instalar de um arquivo .zip\"."
+}
