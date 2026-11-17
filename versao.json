@@ -1,8 +1,8 @@
 {
-  "versao": "2.18.5",
-  "arquivo": "versoes/hubii-central-2.18.5.zip",
-  "sha256": "ab632b253e32bcbadb11fb07c4f196e1e87a21b03442ddf1d7d7bcb908bd41f8",
-  "tamanho": 986594,
-  "data": "2026-11-17T18:42:57Z",
-  "novidades": "- Procurar pedido pelo EAN: some o aviso falso \"a aba Despacho indica 99\" quando a lista inteira veio do servidor do Hubii (o número do botão da aba não é o total da lista)."
+  "versao": "2.19.0",
+  "arquivo": "versoes/hubii-central-2.19.0.zip",
+  "sha256": "8167d66b707f942d88fd7eb0462e87e77db251a096ecd39a7446f7a6cc131596",
+  "tamanho": 989591,
+  "data": "2026-11-17T19:00:52Z",
+  "novidades": "- Novo: Compra contínua > Materiais de separação. A Central calcula a sacola de cada pedido (30x20, 35x45, 45x50, 50x60 ou sem sacola) pelos produtos lidos, e conta as etiquetas da Argox impressas.\n- Estoque e previsão: digite quanto tem de cada material e clique em Salvar. A Central desconta o que saiu, mostra para quantos dias dá e quanto comprar.\n- Lista com a sacola de cada pedido e o motivo, para conferir as regras.\n- O backup agora também guarda essas contagens e o limite do alerta de saída."
 }
