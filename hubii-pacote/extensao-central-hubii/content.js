@@ -268,7 +268,7 @@ const naLista = async id => {
 let nPedido = 0;
 const pedirLista = params => new Promise((ok, falha) => {
   const n = ++nPedido;
-  const fim = setTimeout(() => { window.removeEventListener('message', ouvir); falha(new Error('sem resposta do Hubii em 40 s')); }, 40000);
+  const fim = setTimeout(() => { window.removeEventListener('message', ouvir); falha(new Error('sem resposta do Hubii em 20 s')); }, 20000);
   function ouvir(ev) {
     const d = ev.data; if (ev.source !== window || !d || d.central !== 'lista-resp' || d.n !== n) return;
     clearTimeout(fim); window.removeEventListener('message', ouvir);
@@ -295,7 +295,11 @@ async function lerApi(statusRotulo) {
       }
       if (Number.isFinite(total) && ids.length === total) return { ok: true, ids, total, ordem };
       ultimo = 'li ' + ids.length + ' de ' + total + ' (ordem ' + ordem + ')';
-    } catch (e) { ultimo = e.message + ' (ordem ' + ordem + ')'; }
+    } catch (e) {
+      ultimo = e.message + ' (ordem ' + ordem + ')';
+      // sem nenhuma resposta (ex.: página aberta antes de atualizar a extensão): não adianta tentar as outras ordens
+      if (/^sem resposta/.test(e.message)) break;
+    }
   }
   return { ok: false, motivo: ultimo };
 }
@@ -342,13 +346,23 @@ const limparBusca = () => { try { const c = campoBuscaH(); if (c && c.value) set
 const abrirPedido = async (id, alvo) => {
   for (let t = 1; t <= 3; t++) {
     if (t > 1) {
+      if (estaNoDetalhe() && idAtual() === id) return true;   // o Hubii abriu o pedido certo com atraso
       if (estaNoDetalhe()) { const v = botao('voltar'); if (v) v.click(); await esperar(() => !estaNoDetalhe(), 15); }
-      await esperar(() => lerLista().length > 0, 20); await sleep(1500);
+      await esperar(() => lerLista().length > 0 || (estaNoDetalhe() && idAtual() === id), 30); await sleep(1500);
+      if (estaNoDetalhe() && idAtual() === id) return true;
       alvo = await acharPedido(id);
-      if (!alvo) { log('#' + id + ': não achei mais na lista ao tentar de novo.'); return false; }
+      if (!alvo) {
+        if (await esperar(() => estaNoDetalhe() && idAtual() === id, 10)) return true;
+        log('#' + id + ': não achei mais na lista ao tentar de novo.'); return false;
+      }
     }
     alvo.el.click();
     if (await esperar(() => idAtual() === id, 12)) return true;
+    // o Hubii às vezes demora para abrir o pedido: espera mais um pouco antes de tentar de novo
+    if (!(estaNoDetalhe() && idAtual() && idAtual() !== id)) {
+      log('#' + id + ': o Hubii está demorando para abrir o pedido; esperando mais um pouco...');
+      if (await esperar(() => idAtual() === id || (estaNoDetalhe() && idAtual() && idAtual() !== id), 20) && idAtual() === id) return true;
+    }
     const visto = idAtual();
     log('#' + id + ': o clique ' + (visto ? 'abriu outro pedido (#' + visto + ')' : 'não abriu o pedido') + '; tentativa ' + t + ' de 3.');
   }
@@ -1069,7 +1083,8 @@ const pronto = async () => {
   setTimeout(migrarHistorico, 4000);
   garantirRaiz(); lancador();
   await espelhoPronto;
-  if (rodadaLer()) { try { sessionStorage.removeItem(K_INT); } catch (e) {} await oferecerRetomada(); return; }
+  // havendo rodada interrompida, oferece continuar; se não sobrou nada dela, segue para o que foi pedido no painel
+  if (rodadaLer() && await oferecerRetomada()) { try { sessionStorage.removeItem(K_INT); } catch (e) {} return; }
   let it = null; try { it = JSON.parse(sessionStorage.getItem(K_INT) || 'null'); } catch (e) {}
   if (!it || Date.now() - it.t > 10 * 60000 || !MODOS[it.modo]) return;
   sessionStorage.removeItem(K_INT);
