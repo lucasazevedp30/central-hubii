@@ -94,6 +94,10 @@ footer .esp{flex:1}
 .lk:hover{background:none;color:var(--roxo2)}
 .mut{color:var(--suave)}.okc{color:var(--ok)}.avc{color:var(--av)}
 .prod{font-size:12.5px;line-height:1.5}
+.duas{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:14px;align-items:start}
+@media (max-width:860px){.duas{grid-template-columns:1fr}}
+.metricas.cinco{grid-template-columns:repeat(5,minmax(0,1fr))}
+@media (max-width:860px){.metricas.cinco{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .subabas{display:flex;gap:8px;margin:0 0 12px}
 .sub{background:var(--card);border:1px solid var(--borda);border-radius:999px;padding:7px 16px;font-size:13.5px;color:var(--suave);cursor:pointer}
 .sub.on{background:var(--roxo);border-color:var(--roxo);color:#fff}
@@ -157,7 +161,7 @@ footer .esp{flex:1}
 </section>
 
 <section class="vista" id="vCompra">
-  <div class="subabas"><button class="sub on" data-s="cProd">Produtos</button><button class="sub" data-s="cMat">Materiais de separação</button></div>
+  <div class="subabas"><button class="sub on" data-s="cProd">Produtos</button><button class="sub" data-s="cMat">Materiais de separação</button><button class="sub" data-s="cResumo">Resumo da semana</button></div>
   <div id="cProd">
   <div class="filtros">
     <label>Período <select id="cPer"><option value="semana" selected>Esta semana (segunda até hoje)</option><option value="passada">Semana passada</option><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="pers">Escolher datas</option></select></label>
@@ -183,6 +187,30 @@ footer .esp{flex:1}
     <div class="tabela"><div class="rol"><table><thead><tr><th>Produto</th><th>EAN</th><th>Motivo (Hubii)</th><th>Ação sugerida</th><th class="n">Qtd. recusada</th><th class="n">Valor perdido</th><th class="n">% da perda</th><th class="n">Saiu no período</th></tr></thead><tbody id="rCorpo"></tbody></table></div></div>
   </div>
   <p class="mut" style="font-size:12.5px;margin-top:10px">Conta os pedidos pelo dia do descritivo (ou da etiqueta ou da reimpressão, se o descritivo foi impresso antes da Central 2.12 ou fora dela). Pedidos só lidos, sem impressão, não entram. Os produtos são lidos da tela do pedido no Hubii na hora da impressão. Ação sugerida: qualquer recusa com ruptura ou quantidade insuficiente vai para "Comprar"; só "Recusado no ERP" vai para "Verificar ERP"; "Não trabalho com este produto" (sem ruptura) vai para "Não trabalha".</p>
+  </div>
+  <div id="cResumo" style="display:none">
+    <div class="filtros">
+      <label>Semana <select id="sSem"><option value="0" selected>Esta semana</option><option value="1">Semana passada</option><option value="2">Há 2 semanas</option><option value="3">Há 3 semanas</option></select></label>
+      <label><input type="checkbox" id="sSab"> incluir sábado</label>
+      <span class="mut" id="sPer" style="font-size:12.5px"></span>
+      <button id="sAtu">Atualizar</button>
+      <button class="pri" id="sCopiar">Copiar resumo</button>
+    </div>
+    <div class="metricas cinco" id="sCards"></div>
+    <div class="duas">
+      <div>
+        <h2 style="margin-top:0">Produtos que mais saíram</h2>
+        <div class="tabela"><div class="rol"><table><thead><tr><th>#</th><th>Produto</th><th class="n">Unidades</th><th class="n">Pedidos</th></tr></thead><tbody id="sTop"></tbody></table></div></div>
+      </div>
+      <div>
+        <h2 style="margin-top:0">Sacolas e etiquetas usadas</h2>
+        <div class="tabela"><table><thead><tr><th>Material</th><th class="n">Quantidade</th><th class="n">% dos pedidos</th></tr></thead><tbody id="sMat"></tbody></table></div>
+        <h2>Pedidos por dia</h2>
+        <div class="tabela"><table><thead><tr><th>Dia</th><th class="n">Pedidos</th><th class="n">Unidades</th></tr></thead><tbody id="sDias"></tbody></table></div>
+        <div id="sRec"></div>
+      </div>
+    </div>
+    <p class="mut" style="font-size:12.5px;margin-top:10px">Pedidos contados pelo dia do descritivo (como na aba Produtos). Sacolas pela regra dos Materiais de separação; etiquetas pelas impressas na semana. Pedidos sem produtos lidos ficam fora das somas de produtos e sacolas.</p>
   </div>
   <div id="cMat" style="display:none">
     <div class="filtros">
@@ -884,10 +912,58 @@ function mostrarMateriais() {
   });
   if (!U.peds.length) { const tr = el('tr'); const td = el('td', 'mut', 'Nenhum pedido com produtos lidos no período.'); td.colSpan = 5; tr.append(td); pc.append(tr); }
 }
-document.querySelectorAll('.sub').forEach(b => b.onclick = () => { document.querySelectorAll('.sub').forEach(x => x.classList.toggle('on', x === b)); $('cProd').style.display = b.dataset.s === 'cProd' ? '' : 'none'; $('cMat').style.display = b.dataset.s === 'cMat' ? '' : 'none'; if (b.dataset.s === 'cMat') carregarHist().then(mostrarMateriais); });
+document.querySelectorAll('.sub').forEach(b => b.onclick = () => { document.querySelectorAll('.sub').forEach(x => x.classList.toggle('on', x === b)); ['cProd', 'cMat', 'cResumo'].forEach(k => { $(k).style.display = b.dataset.s === k ? '' : 'none'; }); if (b.dataset.s === 'cMat') carregarHist().then(mostrarMateriais); if (b.dataset.s === 'cResumo') carregarHist().then(mostrarResumo); });
 $('mPer').addEventListener('input', mostrarMateriais);
 $('mAtu').onclick = () => carregarHist(true).then(mostrarMateriais);
 ['mDias', 'mCap'].forEach(k => $(k).addEventListener('change', () => { const c = matCfg(); const v = parseInt($(k).value, 10); if (v > 0) { if (k === 'mDias') c.dias = v; else c.cap = v; matGravar(c); } mostrarMateriais(); }));
+
+
+// ---------- resumo da semana (segunda a sexta, ou até sábado)
+const DIAS_SEM = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+function semanaResumo() {
+  const k = +$('sSem').value || 0; const seg = new Date(); seg.setHours(0, 0, 0, 0); seg.setDate(seg.getDate() - ((seg.getDay() + 6) % 7) - 7 * k);
+  const fim = new Date(seg); fim.setDate(fim.getDate() + ($('sSab').checked ? 6 : 5)); return [seg.getTime(), Math.min(fim.getTime() - 1, Date.now())];
+}
+let RESUMO_TXT = '';
+function mostrarResumo() {
+  if (!$('sCards')) return;
+  const [de, ate] = semanaResumo(); const S = somarSaida(de, ate); const U = usoMateriais(de, ate);
+  const comProd = S.peds.length - S.semProd; const un = S.todos.reduce((a, x) => a + x.un, 0);
+  const sacTot = U.c['30x20'] + U.c['35x45'] + U.c['45x50'] + U.c['50x60'];
+  $('sPer').textContent = dataDe(de) + ' a ' + dataDe(ate);
+  const card = (r, v, sub) => { const m = el('div', 'met'); m.append(el('div', 'r', r), el('div', 'v', v), el('div', 's', sub || '')); return m; };
+  $('sCards').replaceChildren(card('Pedidos', S.peds.length, S.semProd ? S.semProd + ' sem produtos lidos' : 'todos com produtos'), card('Unidades', un, comProd ? (Math.round(10 * un / comProd) / 10).toString().replace('.', ',') + ' por pedido' : ''), card('Produtos diferentes', S.todos.length, S.todos.filter(a => a.alerta).length + ' com saída alta'), card('Sacolas usadas', sacTot, U.peds.filter(x => !x.b.sacolas.length).length + ' pedido(s) sem sacola'), card('Etiquetas Argox', U.c.argox, (Math.round(10 * U.c.argox / matCfg().cap) / 10).toString().replace('.', ',') + ' rolo(s)'));
+  const top = S.todos.slice().sort((a, b) => b.un - a.un || b.peds.size - a.peds.size).slice(0, 15);
+  const tb = $('sTop'); tb.replaceChildren();
+  top.forEach((a, i) => { const tr = el('tr'); const tdN = el('td', '', a.n || a.e); if (a.alerta) { tdN.append(document.createTextNode(' ')); tdN.append(el('span', 'tag e', 'saída alta')); } tr.append(el('td', 'mut', i + 1), tdN, el('td', 'n', a.un), el('td', 'n', a.peds.size)); tb.append(tr); });
+  if (!top.length) { const tr = el('tr'); const td = el('td', 'mut', 'Nenhum produto nesta semana.'); td.colSpan = 4; tr.append(td); tb.append(tr); }
+  const mt = $('sMat'); mt.replaceChildren();
+  const linhasMat = MATS.map(m => [m.nome, U.c[m.k]]).concat([['Sem sacola (sacaria sozinha)', U.peds.filter(x => !x.b.sacolas.length).length]]);
+  linhasMat.forEach(([n, q]) => { const tr = el('tr'); tr.append(el('td', '', n), el('td', 'n', q), el('td', 'n mut', comProd ? Math.round(100 * q / comProd) + '%' : '')); mt.append(tr); });
+  // pedidos e unidades por dia
+  const porDia = new Map();
+  S.peds.forEach(r => { const d = new Date(tSaida(r)); d.setHours(0, 0, 0, 0); const k = d.getTime(); const a = porDia.get(k) || { p: 0, u: 0 }; a.p++; (r.itens || []).forEach(i => { a.u += i.q > 0 ? i.q : 1; }); porDia.set(k, a); });
+  const dt = $('sDias'); dt.replaceChildren(); const linhasDia = [];
+  for (let t = de; t <= ate; t += 864e5) { const d = new Date(t); d.setHours(0, 0, 0, 0); const a = porDia.get(d.getTime()) || { p: 0, u: 0 }; const nome = DIAS_SEM[d.getDay()] + ' ' + d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); linhasDia.push([nome, a.p, a.u]); const tr = el('tr'); tr.append(el('td', '', nome), el('td', 'n', a.p), el('td', 'n', a.u)); dt.append(tr); }
+  // recusas coladas (se houver)
+  const recs = [...recPorEan().values()]; const box = $('sRec'); box.replaceChildren(); const g = lerRecGuardadas(); let txtRec = '';
+  if (recs.length) {
+    const saiu = new Map(S.todos.map(a => [a.e, a.un])); const comprar = recs.filter(r => r.acao === 'Comprar (ruptura)');
+    const cruz = comprar.filter(r => saiu.has(r.e)).sort((a, b) => (b.v || 0) - (a.v || 0));
+    box.append(el('h2', '', 'Recusas do Hubii'));
+    const d = el('div', 'met'); d.append(el('div', 'r', 'Coladas em ' + diaHora(g && g.t)), el('div', 'v', recs.length + ' produtos'), el('div', 's', recs.reduce((a, r) => a + r.q, 0) + ' un. recusadas · ' + brl(recs.reduce((a, r) => a + (r.v || 0), 0)) + ' perdidos · ' + comprar.length + ' para comprar (ruptura)'));
+    box.append(d);
+    if (cruz.length) { const p = el('p', 'mut', 'Saíram nesta semana e tiveram recusa por ruptura: ' + cruz.slice(0, 8).map(r => r.n.slice(0, 70) + ' (' + saiu.get(r.e) + ' saíram, ' + r.q + ' recusadas)').join('; ') + (cruz.length > 8 ? '...' : '')); p.style.fontSize = '12.5px'; box.append(p); }
+    txtRec = '\n\nRECUSAS DO HUBII (coladas em ' + diaHora(g && g.t) + '): ' + recs.length + ' produtos, ' + recs.reduce((a, r) => a + r.q, 0) + ' un., ' + brl(recs.reduce((a, r) => a + (r.v || 0), 0)) + ' perdidos; ' + comprar.length + ' para comprar (ruptura)' + (cruz.length ? ' (' + cruz.length + ' também saíram na semana)' : '') + '.';
+  }
+  RESUMO_TXT = 'RESUMO DA SEMANA (' + dataDe(de) + ' a ' + dataDe(ate) + ')\n' + S.peds.length + ' pedidos · ' + un + ' unidades · ' + S.todos.length + ' produtos diferentes'
+    + '\n\nPRODUTOS QUE MAIS SAÍRAM\n' + top.map((a, i) => (i + 1) + '. ' + (a.n || a.e) + ': ' + a.un + ' un. (' + a.peds.size + ' pedidos)').join('\n')
+    + '\n\nSACOLAS E ETIQUETAS\n' + linhasMat.map(([n, q]) => n + ': ' + q).join('\n')
+    + '\n\nPEDIDOS POR DIA\n' + linhasDia.map(([n, p, u]) => n + ': ' + p + ' pedidos, ' + u + ' un.').join('\n') + txtRec;
+}
+['sSem', 'sSab'].forEach(k => $(k).addEventListener('input', mostrarResumo));
+$('sAtu').onclick = () => carregarHist(true).then(mostrarResumo);
+$('sCopiar').onclick = async () => { mostrarResumo(); try { await navigator.clipboard.writeText(RESUMO_TXT); toast('Resumo copiado. Cole no WhatsApp ou no e-mail.'); } catch (e) { toast('Não consegui copiar.'); } };
 
 // ---------- alerta de saída na aba Hoje (últimos 7 dias; recalcula a cada 10 minutos)
 let ALERTA_HOJE = null;

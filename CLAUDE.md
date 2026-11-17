@@ -81,5 +81,7 @@ extensão (apaga os dados); recarregar sempre da mesma pasta.
   35x45; 2+ = 45x50. Sacaria (>= 7 kg): 2+ = 50x60; 1 sozinha = sem sacola (outros itens seguem a regra). Etiqueta
   Argox = 1 por pedido, rolo de 200. Estoque: o usuário digita a contagem; a Central desconta o que saiu desde ela.
   Regras combinadas com o usuário em 17/11; ajustar aqui e no código se ele pedir.
+- Resumo da semana (2.20.0, sub-aba da Compra contínua): seg a sex (opção de sábado), produtos que mais saíram,
+  sacolas/etiquetas, pedidos por dia, recusas coladas e botão "Copiar resumo" (texto para WhatsApp/e-mail).
 - Reembolso da Shopee: esperando retorno do responsável. Vídeo: esperando áudios do ElevenLabs.
 - Por último (quando o resto estiver 100%): outras lojas — configuração por loja, instalador, fixar ID da extensão.
