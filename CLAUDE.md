@@ -36,6 +36,8 @@ extensão (apaga os dados); recarregar sempre da mesma pasta.
 - A decisão de cancelar ou dar baixa é sempre do usuário.
 
 ## Detalhes técnicos
+- `pend.js` (Verificar pendências) não passa páginas: busca cada cliente/número e lê a 1ª página de cada aba;
+  só falharia se uma busca trouxesse mais de 100 pedidos numa aba (conferido em 17/11).
 - PowerShell **5.1** no Windows: arquivos `.ps1` salvos em **UTF-8 com BOM** (acentos). `painel.html`,
   `.js` e `manifest.json` **sem BOM**. Perfil "Profile 3" tem espaço: vai entre aspas nos argumentos.
 - Chrome no lugar padrão, senão Program Files (x86), `%LOCALAPPDATA%`, e por último o Brave.
@@ -68,7 +70,6 @@ extensão (apaga os dados); recarregar sempre da mesma pasta.
 
 ## Em aberto
 - Confirmar no Hubii real se a lista vem do servidor (`hook-lista.js`) ou da busca um a um (mensagem na conferência).
-- Verificar pendências (`pend.js`) também lê listas do Hubii: conferir se sofre com o defeito de paginação.
 - "Retomar de onde parou" em todas as rotinas (o usuário aprovou).
 - Alertas de compra: alerta de SAÍDA feito na 2.17.4 (limite e marcas sem alerta; padrão Royal Canin e Premier,
   que têm estoque alto). Estoque do OnePet não é confiável (físico x virtual): não usar.

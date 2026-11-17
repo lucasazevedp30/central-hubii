@@ -365,10 +365,10 @@ function desenhar(s) {
     b.onclick = () => { document.querySelector('.aba[data-v="vAjuda"]').click(); mostrarOnline(ONLINE); $('atOnline').scrollIntoView({ behavior: 'smooth', block: 'center' }); };
     a.append(b); al.append(a);
   }
-  if (ALERTA_HOJE && ALERTA_HOJE.n) {
+  if (ALERTA_HOJE && ALERTA_HOJE.novos) {
     const a = el('div', 'alerta av', 'Compra: ' + ALERTA_HOJE.n + ' produto(s) com saída alta nos últimos 7 dias (' + ALERTA_HOJE.lim + ' un. ou mais): ' + ALERTA_HOJE.top.join('; ') + (ALERTA_HOJE.n > 3 ? '...' : '') + ' ');
     const b = el('button', '', 'Ver na Compra contínua'); b.style.marginLeft = '8px';
-    b.onclick = () => { $('cPer').value = '7'; $('cDatas').style.display = 'none'; $('cAcao').value = 'alerta'; document.querySelector('.aba[data-v="vCompra"]').click(); };
+    b.onclick = () => { alertaVisto(ALERTA_HOJE.eans); ALERTA_HOJE.novos = 0; a.remove(); $('cPer').value = '7'; $('cDatas').style.display = 'none'; $('cAcao').value = 'alerta'; document.querySelector('.aba[data-v="vCompra"]').click(); };
     a.append(b); al.append(a);
   }
   if (imp.mp === 'offline') avisa('O Windows diz que a MP-4200 TH está offline. Se ela estiver imprimindo normalmente, pode ignorar; senão, confira o cabo e se ela está ligada.', 'av');
@@ -786,12 +786,17 @@ $('atVoltar').onclick = async () => {
 
 // ---------- alerta de saída na aba Hoje (últimos 7 dias; recalcula a cada 10 minutos)
 let ALERTA_HOJE = null;
+// depois de clicar no aviso, ele some; só volta quando um produto que ainda não tinha sido visto entra no alerta
+const K_ALERTA_VISTO = 'central_alerta_visto';
+const alertaVistoLer = () => { try { return new Set(JSON.parse(localStorage.getItem(K_ALERTA_VISTO) || '[]')); } catch (e) { return new Set(); } };
+const alertaVisto = eans => { try { const v = alertaVistoLer(); eans.forEach(e => v.add(e)); localStorage.setItem(K_ALERTA_VISTO, JSON.stringify([...v].slice(-500))); } catch (e) {} };
 async function atualizarAlertaHoje() {
   try {
     await carregarHist();
     const S = somarSaida(inicioDias(7), Date.now());
     const l = S.todos.filter(a => a.alerta).sort((a, b) => b.un - a.un);
-    ALERTA_HOJE = { n: l.length, lim: S.cfg.lim, top: l.slice(0, 3).map(a => (a.n || a.e).slice(0, 48) + ' (' + a.un + ' un.)') };
+    const visto = alertaVistoLer();
+    ALERTA_HOJE = { n: l.length, novos: l.filter(a => !visto.has(a.e)).length, eans: l.map(a => a.e), lim: S.cfg.lim, top: l.slice(0, 3).map(a => (a.n || a.e).slice(0, 48) + ' (' + a.un + ' un.)') };
   } catch (e) {}
 }
 setTimeout(atualizarAlertaHoje, 3000);
