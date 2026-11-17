@@ -1,8 +1,8 @@
 {
-  "versao": "2.18.3",
-  "arquivo": "versoes/hubii-central-2.18.3.zip",
-  "sha256": "37a32ff46b22548a990a84837947b9d2f970610be5db9a91e72e90a5ff9d29c2",
-  "tamanho": 986480,
-  "data": "2026-11-17T14:11:07Z",
-  "novidades": "- Mais rápido: para achar o próximo pedido, a Central usa primeiro a busca do Hubii pelo número, em vez de passar as páginas da lista. Em listas com mais de uma página, cada pedido fica cerca de 3 vezes mais rápido."
+  "versao": "2.18.4",
+  "arquivo": "versoes/hubii-central-2.18.4.zip",
+  "sha256": "0e4cc192f1b1d65ca0331660ea95234d02aaa343f739f2f7b5afc913eb5f179d",
+  "tamanho": 986541,
+  "data": "2026-11-17T17:35:24Z",
+  "novidades": "- Correção: o cartão \"Etiquetas hoje\" podia contar a mais depois de uma pausa ou de rodadas repetidas (ex.: 178 em vez de 158). Agora conta cada pedido uma vez só, igual à conferência de despacho."
 }
