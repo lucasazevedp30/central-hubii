@@ -38,12 +38,14 @@ const resumoDia = async () => {
     if ((e.k === 'descritivos' || e.k === 'etiquetas') && e.t >= t0) { hoje[e.k].n += e.n || 0; hoje[e.k].ult = Math.max(hoje[e.k].ult, e.t); }
     if (e.k === 'coleta' && (!coleta || e.t > coleta.t)) coleta = { t: e.t, n: e.n || 0, hub: e.hub };
   }
-  // etiquetas: o histórico é gravado a cada etiqueta (o registro só no fim da rodada), então vale o maior
+  // etiquetas: o histórico é gravado a cada etiqueta (o registro só no fim da rodada): vale o histórico, sem repetidos
   try {
     const h = todo.espelho_hubii_etiquetas_historico; const lista = h && h.v ? JSON.parse(h.v) : [];
     const dia = new Date().toLocaleDateString('pt-BR');
     const doDia = lista.filter(x => x && x.dia === dia);
-    if (doDia.length > hoje.etiquetas.n) { hoje.etiquetas.n = doDia.length; hoje.etiquetas.ult = Math.max(hoje.etiquetas.ult, ...doDia.map(x => x.t || 0)); }
+    // conta cada pedido uma vez só (pausas, rodadas repetidas ou reimpressões não somam em dobro), como a conferência
+    const distintos = new Set(doDia.map(x => String(x.id)));
+    if (distintos.size) { hoje.etiquetas.n = distintos.size; hoje.etiquetas.ult = Math.max(hoje.etiquetas.ult, ...doDia.map(x => x.t || 0)); }
   } catch (e) {}
   let pend = null;
   // coletas novas (2.18.1+) trazem quantas são do Hubii; nas antigas, usa a contagem da lista coletada se for da mesma coleta

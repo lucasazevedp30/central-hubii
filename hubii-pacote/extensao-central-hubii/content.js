@@ -666,7 +666,7 @@ async function executarEtiquetas(ids, info) {
       const id = ids[i];
       if (!await aguardarLoginHubii()) { log('O Hubii continua deslogado. Parei; ao entrar de novo, use "Continuar de onde parou".'); erroFatal = true; break; }
       prog(feitos.length, ids.length, '#' + id, 'Etiquetas: imprimindo em ordem');
-      log('Procurando #' + id + ' nas páginas...');
+      log('Procurando #' + id + '...');
       const alvo = await acharPedido(id);
       if (!alvo) { log('#' + id + ' (próximo da ordem) não está na lista nem na busca do Hubii. Parei para manter a ordem.'); erroFatal = true; break; }
             if (!await abrirPedido(id, alvo)) { log('Não consegui abrir #' + id + '. Parando.'); erroFatal = true; break; }
