@@ -50,7 +50,8 @@ extensão (apaga os dados); recarregar sempre da mesma pasta.
   só aceita se bater com `total`) e abre pedidos escondidos pela busca (`acharPedido`). Um `fetch` direto do content
   script falhou no Hubii real ("Failed to fetch"): desde a 2.17.1 o pedido é repetido por `hook-lista.js` (mundo MAIN),
   que copia o pedido da própria tela (cabeçalhos/credenciais). Sem servidor, os pedidos da memória que sumiram das
-  páginas são procurados um a um pela busca.
+  páginas são procurados um a um pela busca. Confirmado no Hubii real em 17/11: "Lista lida direto do servidor do Hubii
+  (todos os 137 pedidos)" — o caminho por `hook-lista.js` funciona.
 
 ## Como entregar uma versão nova
 1. Aumentar a versão em `hubii-pacote/extensao-central-hubii/manifest.json` e no rótulo
@@ -69,7 +70,6 @@ extensão (apaga os dados); recarregar sempre da mesma pasta.
 5. Também dá para mandar o zip para o usuário instalar por "Instalar de um arquivo .zip".
 
 ## Em aberto
-- Confirmar no Hubii real se a lista vem do servidor (`hook-lista.js`) ou da busca um a um (mensagem na conferência).
 - "Retomar de onde parou": feito na 2.18.0 para Descritivos e Etiquetas (`hubii_rodada`, com cópia na extensão;
   janela "continuar de onde parou" ao voltar ao Hubii; pedido do meio só refeito se o usuário marcar). Funcionou na loja em 17/11 (descritivos pararam no
   pedido 88 por Hubii lento ao abrir; 2.18.2 espera mais 20 s antes de tentar de novo). A Baixa no OnePet
