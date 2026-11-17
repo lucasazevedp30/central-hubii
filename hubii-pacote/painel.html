@@ -173,6 +173,11 @@ footer .esp{flex:1}
     <button id="cAtu">Atualizar</button>
     <button class="pri" id="cXlsx">Baixar planilha da compra</button>
   </div>
+  <details class="rec" id="cxBox" style="margin-bottom:12px"><summary style="cursor:pointer"><b>Caixa fechada dos sachês</b> <span class="mut" style="font-size:12.5px">(a saída dos sachês aparece também em caixas)</span></summary>
+    <p class="mut" style="font-size:12.5px;margin:8px 0">Uma linha por marca: <b>marca = unidades na caixa</b>. Vale para sachês: "sachê" no nome, ou ração úmida de até 100 g que não seja lata. Quando uma marca tem linha especial (ex.: Pedigree High Protein), deixe a especial antes da comum.</p>
+    <textarea id="cxTxt" style="min-height:150px"></textarea>
+    <div class="lin"><button class="pri" id="cxSalvar">Salvar</button><button id="cxPadrao">Voltar ao padrão</button><span class="mut" id="cxMsg" style="font-size:12.5px"></span></div>
+  </details>
   <div class="rec">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><b>Recusas do Hubii</b><span class="mut" id="rInfo" style="font-size:12.5px">Cole aqui o relatório de recusas copiado do painel do Hubii.</span></div>
     <textarea id="rTxt" placeholder="Produto	EAN	Marca	Motivo	Qtd. recusada	Valor total	Participação na perda"></textarea>
@@ -575,7 +580,7 @@ function mostrarCompra() {
     const rc = recPorEan().get(a.e); const tdR = el('td');
     if (rc) { tdR.append(el('span', 'tag ' + rc.cls, rc.acao), document.createTextNode(' ' + rc.q + ' un.')); } else tdR.append(el('span', 'mut', '—'));
     const tdN = el('td', '', a.n || '(sem nome)'); if (a.alerta) { tdN.append(document.createTextNode(' ')); tdN.append(el('span', 'tag e', 'saída alta')); }
-    tr.append(tdN, el('td', 'mut', a.e), el('td', 'n', a.un + (a.semQtd ? '*' : '')), el('td', 'n', a.peds.size), el('td', 'n', (a.un / a.peds.size).toFixed(1).replace('.', ',')), el('td', 'mut', diaHora(a.ult)), tdR);
+    tr.append(tdN, el('td', 'mut', a.e), tdUnidades(a, a.semQtd ? '*' : ''), el('td', 'n', a.peds.size), el('td', 'n', (a.un / a.peds.size).toFixed(1).replace('.', ',')), el('td', 'mut', diaHora(a.ult)), tdR);
     corpo.append(tr);
   });
   mostrarRecusas(R);
@@ -658,10 +663,10 @@ $('cXlsx').onclick = () => {
   const P = planilhaPronta(); if (!P) return; const R = somarCompra();
   const est = P.novoEstilo(); const cab = est.get({ b: true, color: 'FFFFFFFF', fill: 'FF3A1F6D', borda: true, h: 'center' }); const c = est.get({ borda: true }); const nb = est.get({ borda: true, b: true });
   const per = dataDe(R.de) + ' a ' + dataDe(R.ate);
-  const p = P.novaPlanilha('Saída por produto', 'FF5B3CC4'); p.larguras = [70, 16, 11, 10, 14, 16, 12]; p.congelar = [0, 2];
+  const p = P.novaPlanilha('Saída por produto', 'FF5B3CC4'); p.larguras = [70, 16, 11, 18, 10, 14, 16, 12]; p.congelar = [0, 2];
   p.linhas.push([P.cel('Saída de produtos ' + per + ' (' + R.peds.length + ' pedidos)', nb)]);
-  p.linhas.push(['Produto', 'EAN', 'Unidades', 'Pedidos', 'Média por pedido', 'Última saída', 'Alerta'].map(t => P.cel(t, cab)));
-  R.lista.forEach(a => p.linhas.push([P.cel(a.n, c), P.cel(a.e, c), P.cel(a.un, c), P.cel(a.peds.size, c), P.cel(Math.round(10 * a.un / a.peds.size) / 10, c), P.cel(diaHora(a.ult), c), P.cel(a.alerta ? 'saída alta' : '', c)]));
+  p.linhas.push(['Produto', 'EAN', 'Unidades', 'Caixas fechadas', 'Pedidos', 'Média por pedido', 'Última saída', 'Alerta'].map(t => P.cel(t, cab)));
+  R.lista.forEach(a => p.linhas.push([P.cel(a.n, c), P.cel(a.e, c), P.cel(a.un, c), P.cel(cxTxt(a.un, a.n), c), P.cel(a.peds.size, c), P.cel(Math.round(10 * a.un / a.peds.size) / 10, c), P.cel(diaHora(a.ult), c), P.cel(a.alerta ? 'saída alta' : '', c)]));
   const pd = P.novaPlanilha('Pedidos', 'FF16856A'); pd.larguras = [12, 16, 70, 8, 16]; pd.congelar = [0, 1];
   pd.linhas.push(['Pedido', 'EAN', 'Produto', 'Qtd.', 'Descritivo'].map(t => P.cel(t, cab)));
   R.peds.forEach(r => (r.itens || []).forEach(i => pd.linhas.push([P.cel(Number(r.id), c), P.cel(i.e, c), P.cel(i.n, c), P.cel(i.q, c), P.cel(diaHora(tSaida(r)), c)])));
@@ -770,7 +775,7 @@ $('bkFazer').onclick = async () => {
     if (!nCh && !confirm('Nenhum Chrome respondeu (a extensão não está aberta). Fazer o backup só com o histórico de pedidos e os dados deste painel?')) { m.textContent = 'Backup cancelado.'; return; }
     const historico = await (await fetch('/api/historico', { cache: 'no-store' })).text();
     const storages = {}; Object.keys(partes).forEach(k => { storages[k] = (partes[k] && partes[k].dados) || {}; });
-    const pacote = { app: 'central-hubii-backup', formato: 1, t: Date.now(), pc: ULT_ESTADO && ULT_ESTADO.pc, versao: ULT_ESTADO && ULT_ESTADO.versaoPasta, storages, historico, painel: { recusas: localStorage.getItem(K_REC), materiais: localStorage.getItem(K_MAT), alerta: localStorage.getItem(K_ALERTA), pendFeitas: localStorage.getItem(K_FEITAS) } };
+    const pacote = { app: 'central-hubii-backup', formato: 1, t: Date.now(), pc: ULT_ESTADO && ULT_ESTADO.pc, versao: ULT_ESTADO && ULT_ESTADO.versaoPasta, storages, historico, painel: { recusas: localStorage.getItem(K_REC), materiais: localStorage.getItem(K_MAT), alerta: localStorage.getItem(K_ALERTA), caixas: localStorage.getItem(K_CX), pendFeitas: localStorage.getItem(K_FEITAS) } };
     const blob = new Blob([JSON.stringify(pacote)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Backup-Central-Hubii-' + carimbo() + '.json'; document.body.append(a); a.click(); setTimeout(() => { a.remove(); URL.revokeObjectURL(a.href); }, 4000);
     const ev = Object.values(storages).reduce((s, d) => s + Object.keys(d).filter(k => k.startsWith('ev_')).length, 0);
@@ -789,7 +794,7 @@ $('rsArq').onchange = async () => {
   try {
     m.textContent = 'Restaurando o histórico de pedidos...';
     if (nh) await fetch('/api/restaurar-hist', { method: 'POST', headers: { 'Content-Type': 'text/plain', 'X-Central': '1' }, body: b.historico });
-    if (b.painel) { if (b.painel.recusas && !localStorage.getItem(K_REC)) localStorage.setItem(K_REC, b.painel.recusas); [[K_MAT, 'materiais'], [K_ALERTA, 'alerta']].forEach(([k, c]) => { if (b.painel[c] && !localStorage.getItem(k)) localStorage.setItem(k, b.painel[c]); }); if (b.painel.pendFeitas) { const o = feitasLer(); let x = {}; try { x = JSON.parse(b.painel.pendFeitas) || {}; } catch (e) {} feitasGravar(Object.assign(x, o)); } }
+    if (b.painel) { if (b.painel.recusas && !localStorage.getItem(K_REC)) localStorage.setItem(K_REC, b.painel.recusas); [[K_MAT, 'materiais'], [K_ALERTA, 'alerta'], [K_CX, 'caixas']].forEach(([k, c]) => { if (b.painel[c] && !localStorage.getItem(k)) localStorage.setItem(k, b.painel[c]); }); if (b.painel.pendFeitas) { const o = feitasLer(); let x = {}; try { x = JSON.parse(b.painel.pendFeitas) || {}; } catch (e) {} feitasGravar(Object.assign(x, o)); } }
     RECCACHE = null; histT = 0;
     if (!nCh) { m.textContent = 'Pronto: histórico e dados do painel restaurados.'; return; }
     const vivas = ((ULT_ESTADO && ULT_ESTADO.fontes) || []).filter(x => x.idade < 75).length;
@@ -835,6 +840,20 @@ $('atVoltar').onclick = async () => {
   } catch (e) { m.textContent = 'Não deu certo: ' + e.message; }
 };
 
+
+
+// ---------- caixa fechada dos sachês (a compra é por caixa)
+const K_CX = 'central_caixas';
+const CX_PADRAO = 'Pedigree High Protein = 20\nPedigree = 18\nWhiskas = 20\nFriskies = 15\nRoyal Canin = 12\nPremier = 20\nDog Chow = 15';
+const cxRegras = () => { let t = CX_PADRAO; try { t = localStorage.getItem(K_CX) || CX_PADRAO; } catch (e) {} return t.split('\n').map(l => l.split('=')).filter(x => x.length === 2 && x[0].trim() && parseInt(x[1], 10) > 0).map(x => ({ m: norm(x[0]).replace(/\s+/g, ''), n: parseInt(x[1], 10) })); };
+// sachê: "sachê" no nome, ou ração úmida de até 100 g que não seja lata (ex.: "Ração Úmida ... FRISKIES Frango 85g")
+const ehSache = nome => { const t = norm(nome); if (/sach(e|et)/.test(t)) return true; const w = pesoKg(nome); return /umida/.test(t) && !/\blata\b/.test(t) && w != null && w <= 0.1; };
+const caixaDe = nome => { if (!ehSache(nome)) return null; const k = norm(nome).replace(/\s+/g, ''); const r = cxRegras().find(x => k.includes(x.m)); return r ? r.n : null; };
+const cxTxt = (un, nome) => { const t = caixaDe(nome); if (!t) return ''; const c = Math.floor(un / t), r = un % t; return c ? c + ' cx' + (r ? ' + ' + r + ' un.' : '') : 'menos de 1 cx'; };
+const tdUnidades = (a, extra) => { const td = el('td', 'n', a.un + (extra || '')); const cx = cxTxt(a.un, a.n); if (cx) { td.append(el('div', 'mut', cx + ' (de ' + caixaDe(a.n) + ')')); td.lastChild.style.fontSize = '11.5px'; } return td; };
+$('cxTxt').value = (() => { try { return localStorage.getItem(K_CX) || CX_PADRAO; } catch (e) { return CX_PADRAO; } })();
+$('cxSalvar').onclick = () => { try { localStorage.setItem(K_CX, $('cxTxt').value.trim()); } catch (e) {} $('cxMsg').textContent = 'Salvo: ' + cxRegras().length + ' marca(s).'; mostrarCompra(); };
+$('cxPadrao').onclick = () => { $('cxTxt').value = CX_PADRAO; try { localStorage.removeItem(K_CX); } catch (e) {} $('cxMsg').textContent = 'Voltou ao padrão.'; mostrarCompra(); };
 
 // ---------- materiais de separação (sacolas e etiquetas)
 const K_MAT = 'central_materiais';
@@ -935,7 +954,7 @@ function mostrarResumo() {
   $('sCards').replaceChildren(card('Pedidos', S.peds.length, S.semProd ? S.semProd + ' sem produtos lidos' : 'todos com produtos'), card('Unidades', un, comProd ? (Math.round(10 * un / comProd) / 10).toString().replace('.', ',') + ' por pedido' : ''), card('Produtos diferentes', S.todos.length, S.todos.filter(a => a.alerta).length + ' com saída alta'), card('Sacolas usadas', sacTot, U.peds.filter(x => !x.b.sacolas.length).length + ' pedido(s) sem sacola'), card('Etiquetas Argox', U.c.argox, (Math.round(10 * U.c.argox / matCfg().cap) / 10).toString().replace('.', ',') + ' rolo(s)'));
   const top = S.todos.slice().sort((a, b) => b.un - a.un || b.peds.size - a.peds.size).slice(0, 15);
   const tb = $('sTop'); tb.replaceChildren();
-  top.forEach((a, i) => { const tr = el('tr'); const tdN = el('td', '', a.n || a.e); if (a.alerta) { tdN.append(document.createTextNode(' ')); tdN.append(el('span', 'tag e', 'saída alta')); } tr.append(el('td', 'mut', i + 1), tdN, el('td', 'n', a.un), el('td', 'n', a.peds.size)); tb.append(tr); });
+  top.forEach((a, i) => { const tr = el('tr'); const tdN = el('td', '', a.n || a.e); if (a.alerta) { tdN.append(document.createTextNode(' ')); tdN.append(el('span', 'tag e', 'saída alta')); } tr.append(el('td', 'mut', i + 1), tdN, tdUnidades(a), el('td', 'n', a.peds.size)); tb.append(tr); });
   if (!top.length) { const tr = el('tr'); const td = el('td', 'mut', 'Nenhum produto nesta semana.'); td.colSpan = 4; tr.append(td); tb.append(tr); }
   const mt = $('sMat'); mt.replaceChildren();
   const linhasMat = MATS.map(m => [m.nome, U.c[m.k]]).concat([['Sem sacola (sacaria sozinha)', U.peds.filter(x => !x.b.sacolas.length).length]]);
@@ -957,7 +976,7 @@ function mostrarResumo() {
     txtRec = '\n\nRECUSAS DO HUBII (coladas em ' + diaHora(g && g.t) + '): ' + recs.length + ' produtos, ' + recs.reduce((a, r) => a + r.q, 0) + ' un., ' + brl(recs.reduce((a, r) => a + (r.v || 0), 0)) + ' perdidos; ' + comprar.length + ' para comprar (ruptura)' + (cruz.length ? ' (' + cruz.length + ' também saíram na semana)' : '') + '.';
   }
   RESUMO_TXT = 'RESUMO DA SEMANA (' + dataDe(de) + ' a ' + dataDe(ate) + ')\n' + S.peds.length + ' pedidos · ' + un + ' unidades · ' + S.todos.length + ' produtos diferentes'
-    + '\n\nPRODUTOS QUE MAIS SAÍRAM\n' + top.map((a, i) => (i + 1) + '. ' + (a.n || a.e) + ': ' + a.un + ' un. (' + a.peds.size + ' pedidos)').join('\n')
+    + '\n\nPRODUTOS QUE MAIS SAÍRAM\n' + top.map((a, i) => (i + 1) + '. ' + (a.n || a.e) + ': ' + a.un + ' un.' + (cxTxt(a.un, a.n) ? ' = ' + cxTxt(a.un, a.n) : '') + ' (' + a.peds.size + ' pedidos)').join('\n')
     + '\n\nSACOLAS E ETIQUETAS\n' + linhasMat.map(([n, q]) => n + ': ' + q).join('\n')
     + '\n\nPEDIDOS POR DIA\n' + linhasDia.map(([n, p, u]) => n + ': ' + p + ' pedidos, ' + u + ' un.').join('\n') + txtRec;
 }

@@ -83,5 +83,8 @@ extensão (apaga os dados); recarregar sempre da mesma pasta.
   Regras combinadas com o usuário em 17/11; ajustar aqui e no código se ele pedir.
 - Resumo da semana (2.20.0, sub-aba da Compra contínua): seg a sex (opção de sábado), produtos que mais saíram,
   sacolas/etiquetas, pedidos por dia, recusas coladas e botão "Copiar resumo" (texto para WhatsApp/e-mail).
+- Caixa fechada dos sachês (2.20.1, editável na aba Produtos, `painel.html` `caixaDe`): Pedigree High Protein 20,
+  Pedigree 18, Whiskas 20, Friskies 15, Royal Canin 12, Premier 20, Dog Chow 15. Sachê = "sachê" no nome ou ração
+  úmida <= 100 g que não seja lata (o Friskies vem sem "sachê" no nome). A compra desses sachês é por caixa.
 - Reembolso da Shopee: esperando retorno do responsável. Vídeo: esperando áudios do ElevenLabs.
 - Por último (quando o resto estiver 100%): outras lojas — configuração por loja, instalador, fixar ID da extensão.
