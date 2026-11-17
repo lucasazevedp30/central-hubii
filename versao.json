@@ -1,8 +1,8 @@
 {
-  "versao": "2.18.4",
-  "arquivo": "versoes/hubii-central-2.18.4.zip",
-  "sha256": "0e4cc192f1b1d65ca0331660ea95234d02aaa343f739f2f7b5afc913eb5f179d",
-  "tamanho": 986541,
-  "data": "2026-11-17T17:35:24Z",
-  "novidades": "- Correção: o cartão \"Etiquetas hoje\" podia contar a mais depois de uma pausa ou de rodadas repetidas (ex.: 178 em vez de 158). Agora conta cada pedido uma vez só, igual à conferência de despacho."
+  "versao": "2.18.5",
+  "arquivo": "versoes/hubii-central-2.18.5.zip",
+  "sha256": "ab632b253e32bcbadb11fb07c4f196e1e87a21b03442ddf1d7d7bcb908bd41f8",
+  "tamanho": 986594,
+  "data": "2026-11-17T18:42:57Z",
+  "novidades": "- Procurar pedido pelo EAN: some o aviso falso \"a aba Despacho indica 99\" quando a lista inteira veio do servidor do Hubii (o número do botão da aba não é o total da lista)."
 }
