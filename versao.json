@@ -1,8 +1,8 @@
 {
-  "versao": "2.20.0",
-  "arquivo": "versoes/hubii-central-2.20.0.zip",
-  "sha256": "134084c03ab3286ab08718a433f12b2aaf5bbd28dc6ef47338068d1d875e1b4f",
-  "tamanho": 991535,
-  "data": "2026-11-17T19:46:06Z",
-  "novidades": "- Novo: Compra contínua > Resumo da semana (segunda a sexta, com opção de incluir o sábado e ver semanas anteriores).\n- Mostra os números da semana, os produtos que mais saíram, todas as sacolas e etiquetas usadas, pedidos por dia e as recusas coladas.\n- Botão \"Copiar resumo\" para colar no WhatsApp ou no e-mail."
+  "versao": "2.20.1",
+  "arquivo": "versoes/hubii-central-2.20.1.zip",
+  "sha256": "e1480ee38fce3f467edee9e48f39ea6540f6f091a13a31c0efa65d46d807afb3",
+  "tamanho": 992620,
+  "data": "2026-11-17T19:51:07Z",
+  "novidades": "- Sachês em caixa fechada: na Compra contínua (Produtos e Resumo da semana), a saída dos sachês aparece também em caixas (ex.: 36 un. = 2 cx de 18). Também na planilha e no texto do \"Copiar resumo\".\n- Tamanho das caixas editável em Produtos > \"Caixa fechada dos sachês\" (Pedigree 18, Pedigree High Protein 20, Whiskas 20, Friskies 15, Royal Canin 12, Premier 20, Dog Chow 15)."
 }
