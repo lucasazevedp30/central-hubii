@@ -71,8 +71,8 @@ extensão (apaga os dados); recarregar sempre da mesma pasta.
 ## Em aberto
 - Confirmar no Hubii real se a lista vem do servidor (`hook-lista.js`) ou da busca um a um (mensagem na conferência).
 - "Retomar de onde parou": feito na 2.18.0 para Descritivos e Etiquetas (`hubii_rodada`, com cópia na extensão;
-  janela "continuar de onde parou" ao voltar ao Hubii; pedido do meio só refeito se o usuário marcar). Falta avaliar
-  Ler BR, Reimprimir e a Baixa no OnePet.
+  janela "continuar de onde parou" ao voltar ao Hubii; pedido do meio só refeito se o usuário marcar). A Baixa no OnePet
+  já tem o seu próprio (confirmado pelo usuário em 17/11). Ler BR e Reimprimir: opcionais, baixa prioridade.
 - Alertas de compra: alerta de SAÍDA feito na 2.17.4 (limite e marcas sem alerta; padrão Royal Canin e Premier,
   que têm estoque alto). Estoque do OnePet não é confiável (físico x virtual): não usar.
 - Reembolso da Shopee: esperando retorno do responsável. Vídeo: esperando áudios do ElevenLabs.
