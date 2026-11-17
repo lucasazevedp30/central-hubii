@@ -36,7 +36,7 @@ const resumoDia = async () => {
     if (!k.startsWith('ev_')) continue;
     const e = todo[k]; if (!e || !e.t) continue;
     if ((e.k === 'descritivos' || e.k === 'etiquetas') && e.t >= t0) { hoje[e.k].n += e.n || 0; hoje[e.k].ult = Math.max(hoje[e.k].ult, e.t); }
-    if (e.k === 'coleta' && (!coleta || e.t > coleta.t)) coleta = { t: e.t, n: e.n || 0 };
+    if (e.k === 'coleta' && (!coleta || e.t > coleta.t)) coleta = { t: e.t, n: e.n || 0, hub: e.hub };
   }
   // etiquetas: o histórico é gravado a cada etiqueta (o registro só no fim da rodada), então vale o maior
   try {
@@ -46,7 +46,8 @@ const resumoDia = async () => {
     if (doDia.length > hoje.etiquetas.n) { hoje.etiquetas.n = doDia.length; hoje.etiquetas.ult = Math.max(hoje.etiquetas.ult, ...doDia.map(x => x.t || 0)); }
   } catch (e) {}
   let pend = null;
-  if (coleta) pend = { t: coleta.t, n: (todo.painel_pend && todo.painel_pend.n != null && todo.painel_pend.t >= coleta.t - 600000) ? todo.painel_pend.n : coleta.n };
+  // coletas novas (2.18.1+) trazem quantas são do Hubii; nas antigas, usa a contagem da lista coletada se for da mesma coleta
+  if (coleta) pend = { t: coleta.t, lidas: coleta.n, n: coleta.hub != null ? coleta.hub : (todo.painel_pend && todo.painel_pend.n != null && todo.painel_pend.t >= coleta.t - 600000) ? todo.painel_pend.n : null };
   cacheDia = { t: Date.now(), v: { hoje, pend } };
   return cacheDia.v;
 };

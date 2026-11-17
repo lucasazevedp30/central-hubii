@@ -390,7 +390,7 @@ function desenhar(s) {
     $('bConf').style.width = (c.total ? Math.round(100 * c.conf / c.total) : 0) + '%';
   } else { $('mConf').textContent = '–'; $('sConf').textContent = vivas.length ? 'sem conferência hoje' : 'abra o Hubii para ver'; $('sConf').className = 's'; $('bConf').style.width = '0'; }
   const pend = fs.map(f => f.pend).filter(p => p && p.t).sort((a, b) => b.t - a.t)[0];
-  if (pend) { $('mPend').textContent = pend.n; const sp = $('sPend'); const velho = pend.t < hojeIni(); sp.textContent = 'coleta de ' + (velho ? new Date(pend.t).toLocaleDateString('pt-BR') + ' ' : '') + hhmm(pend.t); sp.className = 's ' + (velho ? 'av' : ''); }
+  if (pend) { $('mPend').textContent = pend.n != null ? pend.n : '?'; const sp = $('sPend'); const velho = pend.t < hojeIni(); sp.textContent = (pend.lidas ? 'do Hubii, de ' + pend.lidas + ' lidas · ' : '') + 'coleta de ' + (velho ? new Date(pend.t).toLocaleDateString('pt-BR') + ' ' : '') + hhmm(pend.t); sp.className = 's ' + (velho ? 'av' : ''); }
   else { $('mPend').textContent = '–'; $('sPend').textContent = 'nenhuma coleta registrada'; }
 
   // rotina em andamento

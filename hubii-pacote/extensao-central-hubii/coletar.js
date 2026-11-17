@@ -233,7 +233,7 @@ if (!mudou) break;
 const todos = [...vistos.values()];
 btParar.style.display = 'none';
 const finalizar = (hub, extra) => {
-try { if (window.__centralReg && todos.length) window.__centralReg.add({ k: 'coleta', t0: T0reg, t: Date.now(), n: todos.length, parado: !!parar }); } catch (e) {}
+try { if (window.__centralReg && todos.length) window.__centralReg.add({ k: 'coleta', t0: T0reg, t: Date.now(), n: todos.length, hub: hub.length, parado: !!parar }); } catch (e) {}
 const texto = hub.map(v => [v.cod, v.cliente, v.total, v.data, v.endereco || '', '', (v.eans || []).join(','), v.cpf || ''].join('\t')).join('\n');
 localStorage.setItem('hubii_pend_coletadas', texto);
 saida.value = texto;
