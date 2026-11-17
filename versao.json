@@ -1,8 +1,8 @@
 {
-  "versao": "2.18.0",
-  "arquivo": "versoes/hubii-central-2.18.0.zip",
-  "sha256": "9ed67f475bf196484ebfa264497283501ba4a33180a6e2a088f369d261cf51e1",
-  "tamanho": 986043,
-  "data": "2026-11-17T00:29:09Z",
-  "novidades": "- Continuar de onde parou (Descritivos e Etiquetas): se o Hubii deslogar ou a página recarregar no meio, ao voltar aparece a janela \"continuar de onde parou\" com o que já foi feito e o que falta. Nada se repete.\n- Se a queda pegar um pedido no meio (faturado sem confirmar o descritivo, ou etiqueta clicada sem confirmar), ele aparece com uma caixinha desmarcada: marque só se não saiu.\n- Se o Hubii mostrar o login sem recarregar a página, a rotina espera você entrar de novo e continua sozinha."
+  "versao": "2.18.1",
+  "arquivo": "versoes/hubii-central-2.18.1.zip",
+  "sha256": "16dac823b3097dc628cd1458441e2d7a89015031b8a4caf58ecf2d188e53dc2e",
+  "tamanho": 986166,
+  "data": "2026-11-17T13:10:33Z",
+  "novidades": "- Cartão \"Pendências Hubii\" na aba Hoje: mostra as pendências do Hubii e quantas foram lidas no total (ex.: \"78 do Hubii, de 177 lidas\").\n- Correção: em coletas seguidas com o mesmo número do Hubii, o cartão podia mostrar o total lido no lugar das do Hubii."
 }
