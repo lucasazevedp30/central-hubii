@@ -71,7 +71,7 @@ const botao = t => [...document.querySelectorAll('button')].filter(b => !b.close
 const lerJson = (k, pad) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? pad : v; } catch (e) { return pad; } };
 // As memórias (descritivos, etiquetas, códigos BR) ficam no site e também numa cópia no armazenamento da extensão.
 // Se o site apagar os dados dele (ex.: ao sair e entrar de novo no Hubii), a cópia devolve a memória.
-const ESPELHO = ['hubii_fila_etiquetas', 'hubii_etiquetas_historico', 'hubii_etq_br', 'hubii_faturados'];
+const ESPELHO = ['hubii_fila_etiquetas', 'hubii_etiquetas_historico', 'hubii_etq_br', 'hubii_faturados', 'hubii_rodada'];
 const espelhar = (k, v) => { try { if (ESPELHO.includes(k)) chrome.storage.local.set({ ['espelho_' + k]: { t: Date.now(), v } }); } catch (e) {} };
 const gravar = (k, v) => { const j = JSON.stringify(v); localStorage.setItem(k, j); espelhar(k, j); };
 const espelhoPronto = new Promise(res => {
@@ -96,6 +96,21 @@ const histLer = () => lerJson(K_HIST, []).filter(x => x.t && Date.now() - x.t < 
 const histSet = () => new Set(histLer().map(x => x.id));
 const fatLer = () => { const r = lerJson(K_FAT, {}); for (const k in r) if (Date.now() - r[k] > 3600000) delete r[k]; return r; };
 const HOJE = () => new Date().toLocaleDateString('pt-BR');
+// ---------- rodada em andamento (para continuar de onde parou se o Hubii deslogar ou a página recarregar)
+// { modo, ids (lista confirmada, em ordem), feitos, pulados, meio (pedido que estava no meio: faturado/clicado sem confirmação), t0, u }
+const K_RODADA = 'hubii_rodada';
+const rodadaLer = () => { const r = lerJson(K_RODADA, null); return r && r.modo && Array.isArray(r.ids) && Date.now() - (r.u || 0) < 12 * 3600000 ? r : null; };
+const rodadaGravar = r => { r.u = Date.now(); gravar(K_RODADA, r); };
+const rodadaFim = () => gravar(K_RODADA, null);
+const rodadaFalta = r => r.ids.filter(id => !r.feitos.includes(id) && !r.pulados.includes(id) && id !== r.meio);
+// o Hubii deslogou sem recarregar a página: espera a pessoa entrar de novo (até 30 min) e a lista voltar
+const deslogadoHubii = () => !!document.querySelector('input[type="password"]') || /login|signin|entrar/i.test(location.pathname);
+async function aguardarLoginHubii() {
+  if (!deslogadoHubii()) return true;
+  log('O Hubii deslogou. Entre de novo nesta aba: eu continuo sozinho quando a lista de pedidos voltar.');
+  for (let i = 0; i < 360 && !parar; i++) { await sleep(5000); if (!deslogadoHubii() && (botaoFiltros() || abaDespacho())) { await sleep(3000); return true; } }
+  return false;
+}
 
 const idAtual = () => (document.body.innerText.match(/Pedido\s*#(\d+)/) || [])[1];
 const estaNoDetalhe = () => !!idAtual() && !!botao('voltar');
@@ -517,42 +532,56 @@ async function rodarDescritivos() {
     reler: async () => { try { return await levantarDescritivos(); } catch (e) { return null; } }
   });
   if (!r) { lancador(); return; }
+  await executarDescritivos(r.ids, { evit: dados.itens.filter(i => i.estado === 'cinza').length });
+}
+
+// faz o trabalho dos descritivos numa lista já confirmada (também usado para continuar de onde parou)
+async function executarDescritivos(ids, info) {
+  MODO = MODOS.descritivos;
   rodando = true; parar = false; caixaProgresso('Descritivos: faturando e imprimindo');
-  const T0 = Date.now(); const evit = dados.itens.filter(i => i.estado === 'cinza').length;
-  const ids = r.ids; const feitos = []; const pulados = [];
+  const T0 = Date.now(); const evit = (info && info.evit) || 0;
+  const feitos = []; const pulados = [];
+  const rod = (info && info.rodada) || { modo: 'descritivos', ids: ids.slice(), feitos: [], pulados: [], meio: null, t0: T0 };
+  rodadaGravar(rod);
   const fat = fatLer();
   const marcarFat = id => { fat[id] = Date.now(); gravar(K_FAT, fat); };
   const entrarFila = id => { const q = filaLer(); if (!q.some(x => x.id === id)) { q.push({ id, etiqueta: false, dia: HOJE(), t: Date.now(), hora: new Date().toLocaleTimeString('pt-BR') }); gravar(K_FILA, q); } };
-  // zera a memória antiga se todos já tiveram etiqueta impressa
-  { const imp = histSet(); const q0 = filaLer(); gravar(K_FILA, q0.length && q0.every(x => x.etiqueta || imp.has(x.id)) ? [] : q0); }
+  // zera a memória antiga se todos já tiveram etiqueta impressa (só numa rodada nova)
+  if (!(info && info.rodada)) { const imp = histSet(); const q0 = filaLer(); gravar(K_FILA, q0.length && q0.every(x => x.etiqueta || imp.has(x.id)) ? [] : q0); }
+  let erroFatal = false;
   try {
     for (let i = 0; i < ids.length && !parar; i++) {
       const id = ids[i];
+      if (!await aguardarLoginHubii()) { log('O Hubii continua deslogado. Parei; ao entrar de novo, use "Continuar de onde parou".'); erroFatal = true; break; }
       prog(feitos.length + pulados.length, ids.length, '#' + id, 'Descritivos: faturando e imprimindo');
       log('Abrindo #' + id + '...');
       const alvo = await acharPedido(id);
-      if (!alvo) { pulados.push(id); prog(feitos.length + pulados.length, ids.length, '#' + id); log('#' + id + ' não está mais na lista; pulei.'); continue; }
-            if (!await abrirPedido(id, alvo)) { log('Não consegui abrir #' + id + '. Parando.'); break; }
+      if (!alvo) { pulados.push(id); rod.pulados.push(id); rodadaGravar(rod); prog(feitos.length + pulados.length, ids.length, '#' + id); log('#' + id + ' não está mais na lista; pulei.'); continue; }
+      if (!await abrirPedido(id, alvo)) { log('Não consegui abrir #' + id + '. Parando.'); erroFatal = true; break; }
       await sleep(1500);
       const f = await esperar(() => { const b = botao('faturar'); return b && !b.disabled ? b : null; }, 15);
-      if (!f) { pulados.push(id); log('#' + id + ': botão Faturar não liberou em 15s (ou já faturado), pulei.'); }
+      if (!f) { pulados.push(id); rod.pulados.push(id); rodadaGravar(rod); log('#' + id + ': botão Faturar não liberou em 15s (ou já faturado), pulei.'); }
       else {
+        rod.meio = id; rodadaGravar(rod);
         f.click(); marcarFat(id); entrarFila(id);
         await esperar(() => { const b = botao('faturar'); return !b || b.disabled; }, 30);
         const imp = await esperar(() => { const b = botao('imprimir descritivo'); return b && !b.disabled ? b : null; }, 30);
-        if (!imp) { log('#' + id + ': faturou, mas o botão de imprimir não liberou (imprima à mão). Parando.'); feitos.push(id); regPed(id, { itens: lerItensTela() }); break; }
-        imp.click(); feitos.push(id); regPed(id, { desc: Date.now(), itens: lerItensTela() }); prog(feitos.length + pulados.length, ids.length, '#' + id); log('#' + id + ': faturado e descritivo enviado.');
+        if (!imp) { log('#' + id + ': faturou, mas o botão de imprimir não liberou (imprima à mão). Parando.'); feitos.push(id); regPed(id, { itens: lerItensTela() }); erroFatal = true; break; }
+        imp.click(); feitos.push(id); rod.feitos.push(id); rod.meio = null; rodadaGravar(rod);
+        regPed(id, { desc: Date.now(), itens: lerItensTela() }); prog(feitos.length + pulados.length, ids.length, '#' + id); log('#' + id + ': faturado e descritivo enviado.');
         await sleep(5000);
       }
-      const v = botao('voltar'); if (!v) { log('Botão Voltar não encontrado. Parando.'); break; }
+      const v = botao('voltar'); if (!v) { log('Botão Voltar não encontrado. Parando.'); erroFatal = true; break; }
       v.click(); await esperar(() => !estaNoDetalhe(), 15); await esperar(() => lerLista().length > 0 || linhasBrutas().length === 0, 20); await sleep(1500);
     }
-  } catch (e) { console.error(e); log('Erro inesperado: ' + e.message); }
+  } catch (e) { console.error(e); log('Erro inesperado: ' + e.message); erroFatal = true; }
   rodando = false; limparBusca();
   const dTot = Date.now() - T0;
   if (feitos.length || pulados.length) reg('descritivos', T0, { n: feitos.length, pul: pulados.length, evit, parado: parar });
   const rel = 'Descritivos faturados e enviados (' + feitos.length + '): ' + feitos.join(' ') + (pulados.length ? '\nPulados: ' + pulados.join(' ') : '');
   const completo = !parar && feitos.length + pulados.length >= ids.length;
+  // a rodada só fica guardada (para continuar depois) se parou por erro ou queda; terminou ou você parou = encerra
+  if (completo || (parar && !erroFatal)) rodadaFim();
   fimCaixa((completo ? 'Concluído: ' : 'Parou: ') + feitos.length + ' pedido(s) faturado(s) e descritivo enviado' + (pulados.length ? '; ' + pulados.length + ' pulado(s)' : '') + '. Tempo: ' + durTxt(dTot) + (feitos.length ? ' (média de ' + durTxt(dTot / feitos.length) + ' por pedido)' : '') + (completo ? '. Agora use Imprimir Etiquetas.' : '. Confira o que faltou antes de continuar.'), rel, { estado: completo ? 'ok' : 'parou', stats: [['Tempo total', durTxt(dTot)], ['Média por pedido', feitos.length ? durTxt(dTot / feitos.length) : '-'], ['Repetições evitadas', String(evit)]] });
 }
 
@@ -602,21 +631,32 @@ async function rodarEtiquetas() {
   };
   const r = await janelaLista(cfg);
   if (!r) { lancador(); return; }
+  await executarEtiquetas(r.ids, { evit: dados.itens.filter(i => i.estado === 'cinza').length });
+}
+
+// imprime as etiquetas de uma lista já confirmada, em ordem (também usado para continuar de onde parou)
+async function executarEtiquetas(ids, info) {
+  MODO = MODOS.etiquetas;
   rodando = true; parar = false; caixaProgresso('Etiquetas: imprimindo em ordem');
-  const T0 = Date.now(); const evit = dados.itens.filter(i => i.estado === 'cinza').length;
-  const ids = r.ids; const feitos = [];
+  const T0 = Date.now(); const evit = (info && info.evit) || 0;
+  const feitos = [];
+  const rod = (info && info.rodada) || { modo: 'etiquetas', ids: ids.slice(), feitos: [], pulados: [], meio: null, t0: T0 };
   const marcarImpressa = id => { const hh = histLer(); hh.push({ id, dia: HOJE(), t: Date.now(), hora: new Date().toLocaleTimeString('pt-BR') }); gravar(K_HIST, hh); };
+  rodadaGravar(rod);
+  let erroFatal = false;
   try {
     for (let i = 0; i < ids.length && !parar; i++) {
       const id = ids[i];
+      if (!await aguardarLoginHubii()) { log('O Hubii continua deslogado. Parei; ao entrar de novo, use "Continuar de onde parou".'); erroFatal = true; break; }
       prog(feitos.length, ids.length, '#' + id, 'Etiquetas: imprimindo em ordem');
       log('Procurando #' + id + ' nas páginas...');
       const alvo = await acharPedido(id);
-      if (!alvo) { log('#' + id + ' (próximo da ordem) não está na lista nem na busca do Hubii. Parei para manter a ordem.'); break; }
-            if (!await abrirPedido(id, alvo)) { log('Não consegui abrir #' + id + '. Parando.'); break; }
+      if (!alvo) { log('#' + id + ' (próximo da ordem) não está na lista nem na busca do Hubii. Parei para manter a ordem.'); erroFatal = true; break; }
+            if (!await abrirPedido(id, alvo)) { log('Não consegui abrir #' + id + '. Parando.'); erroFatal = true; break; }
       await sleep(1500);
       const et = await esperar(() => { const b = botao('imprimir etiqueta'); return b && !b.disabled ? b : null; }, ESPERA_MIN * 60);
-      if (!et) { log('#' + id + ': botão "Imprimir etiqueta" não liberou em ' + ESPERA_MIN + ' min. Parei para manter a ordem.'); break; }
+      if (!et) { log('#' + id + ': botão "Imprimir etiqueta" não liberou em ' + ESPERA_MIN + ' min. Parei para manter a ordem.'); erroFatal = true; break; }
+      rod.meio = id; rodadaGravar(rod);
       et.click(); log('#' + id + ': cliquei em "Imprimir etiqueta"; aguardando a aba abrir...');
       let abriu = await esperar(() => document.visibilityState === 'hidden', 10, true);
       for (let t = 2; !abriu && t <= 3; t++) {
@@ -625,21 +665,22 @@ async function rodarEtiquetas() {
         ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'].forEach(tp => b2.dispatchEvent(new MouseEvent(tp, { bubbles: true, cancelable: true, view: window })));
         abriu = await esperar(() => document.visibilityState === 'hidden', 10, true);
       }
-      if (!abriu) { log('#' + id + ': a aba da etiqueta NÃO abriu depois de 3 cliques (provável pop-up bloqueado). Não marquei como impressa. Libere pop-ups para hub.hubii.co.'); break; }
-      if (!await esperar(() => document.visibilityState === 'visible', ESPERA_ABA_SEG, true)) { log('#' + id + ': a aba da etiqueta não foi fechada em ' + ESPERA_ABA_SEG + 's. Não marquei como impressa; confira a impressão e o ajudante.'); break; }
-      marcarImpressa(id); feitos.push(id); regPed(id, { etq: Date.now(), itens: lerItensTela() }); prog(feitos.length, ids.length, '#' + id);
+      if (!abriu) { log('#' + id + ': a aba da etiqueta NÃO abriu depois de 3 cliques (provável pop-up bloqueado). Não marquei como impressa. Libere pop-ups para hub.hubii.co.'); erroFatal = true; break; }
+      if (!await esperar(() => document.visibilityState === 'visible', ESPERA_ABA_SEG, true)) { log('#' + id + ': a aba da etiqueta não foi fechada em ' + ESPERA_ABA_SEG + 's. Não marquei como impressa; confira a impressão e o ajudante.'); erroFatal = true; break; }
+      marcarImpressa(id); feitos.push(id); rod.feitos.push(id); rod.meio = null; rodadaGravar(rod); regPed(id, { etq: Date.now(), itens: lerItensTela() }); prog(feitos.length, ids.length, '#' + id);
       log('#' + id + ': etiqueta impressa e aba fechada. Últimas: ' + feitos.slice(-4).map(x => '#' + x).join(', '));
       await sleep(1500);
-      const v = botao('voltar'); if (!v) { log('Botão Voltar não encontrado. Parando.'); break; }
+      const v = botao('voltar'); if (!v) { log('Botão Voltar não encontrado. Parando.'); erroFatal = true; break; }
       v.click(); await esperar(() => !estaNoDetalhe(), 15); await esperar(() => lerLista().length > 0, 20); await sleep(1500);
     }
-  } catch (e) { console.error(e); log('Erro inesperado: ' + e.message); }
+  } catch (e) { console.error(e); log('Erro inesperado: ' + e.message); erroFatal = true; }
   rodando = false; limparBusca();
   const dTot = Date.now() - T0;
   if (feitos.length) reg('etiquetas', T0, { n: feitos.length, pul: 0, evit, parado: parar || ids.length > feitos.length });
   const faltam = ids.filter(x => !feitos.includes(x));
   const rel = 'Etiquetas impressas (' + feitos.length + '), em ordem: ' + feitos.join(' ') + (faltam.length ? '\nNão impressas desta rodada: ' + faltam.join(' ') : '');
   const completo = !parar && feitos.length >= ids.length;
+  if (completo || (parar && !erroFatal)) rodadaFim();
   fimCaixa((completo ? 'Concluído: ' : 'Parou: ') + feitos.length + ' etiqueta(s) confirmada(s)' + (feitos.length ? ' (de #' + feitos[0] + ' a #' + feitos[feitos.length - 1] + ')' : '') + (faltam.length ? '. Faltaram ' + faltam.length + ' da seleção.' : '.') + ' Ao terminar, feche a janela do ajudante: a MP-4200 volta a ser a impressora padrão. Tempo: ' + durTxt(dTot) + (feitos.length ? ' (média de ' + durTxt(dTot / feitos.length) + ' por etiqueta)' : '') + '.', rel, { estado: completo ? 'ok' : 'parou', stats: [['Tempo total', durTxt(dTot)], ['Média por etiqueta', feitos.length ? durTxt(dTot / feitos.length) : '-'], ['Repetições evitadas', String(evit)]] });
 }
 
@@ -949,9 +990,86 @@ const migrarHistorico = () => {
     if (S && S.conf && S.t0 > Date.now() - MS14) Object.keys(S.conf).forEach(id => { const c = S.conf[id]; if (c && c.t) P(id, { conf: c.t }); });
   } catch (e) {}
 };
+// ---------- continuar de onde parou (Descritivos e Etiquetas)
+// imprime só o descritivo de um pedido já faturado (sem faturar de novo)
+async function imprimirSoDescritivo(id) {
+  TODOS = true;
+  try {
+    const alvo = await buscarPedido(id);
+    if (!alvo || !await abrirPedido(id, alvo)) { log('#' + id + ': não consegui abrir para imprimir o descritivo; use Reimprimir descritivos.'); return false; }
+    await sleep(1500);
+    const imp = await esperar(() => { const b = botao('imprimir descritivo'); return b && !b.disabled ? b : null; }, 30);
+    if (!imp) { log('#' + id + ': o botão de imprimir o descritivo não liberou; use Reimprimir descritivos.'); return false; }
+    imp.click(); regPed(id, { desc: Date.now(), itens: lerItensTela() }); log('#' + id + ': descritivo enviado (sem faturar de novo).');
+    await sleep(4000);
+    const v = botao('voltar'); if (v) { v.click(); await esperar(() => !estaNoDetalhe(), 15); }
+    return true;
+  } finally { TODOS = false; limparBusca(); await sleep(1500); }
+}
+async function continuarRodada(r, refazerMeio) {
+  const desc = r.modo === 'descritivos';
+  MODO = desc ? MODOS.descritivos : MODOS.etiquetas;
+  caixaProgresso(desc ? 'Descritivos: continuando de onde parou' : 'Etiquetas: continuando de onde parou');
+  log('Preparando a tela para continuar...');
+  if (estaNoDetalhe()) { botao('voltar').click(); await esperar(() => !estaNoDetalhe(), 15); }
+  let lista = rodadaFalta(r);
+  if (r.meio) {
+    const m = r.meio;
+    if (desc) {
+      if (refazerMeio) { if (!await imprimirSoDescritivo(m)) { fimCaixa('Não consegui imprimir o descritivo do #' + m + '. Nada mais foi feito; a rodada continua guardada. Imprima esse descritivo por Reimprimir e use "Continuar de onde parou" de novo.'); return; } }
+      else regPed(m, { desc: Date.now() });
+      r.feitos.push(m);
+    } else if (refazerMeio) lista.unshift(m);
+    else { const hh = histLer(); if (!hh.some(x => x.id === m)) { hh.push({ id: m, dia: HOJE(), t: Date.now(), hora: new Date().toLocaleTimeString('pt-BR') }); gravar(K_HIST, hh); } regPed(m, { etq: Date.now() }); r.feitos.push(m); }
+    r.meio = null; rodadaGravar(r);
+  }
+  if (!await prepararTela()) { fimCaixa('Não consegui deixar a tela em Despacho com o filtro certo. Aplique à mão (Despacho > Filtros) e recarregue a página: a rodada continua guardada.'); return; }
+  await esperar(() => lerLista().length > 0, 20); await sleep(800);
+  if (!lista.length) { rodadaFim(); fimCaixa('Pronto: não faltava mais nada desta rodada.'); return; }
+  if (desc) await executarDescritivos(lista, { rodada: r }); else await executarEtiquetas(lista, { rodada: r });
+}
+async function oferecerRetomada() {
+  await espelhoPronto;
+  const r = rodadaLer(); if (!r) return false;
+  r.feitos = r.feitos || []; r.pulados = r.pulados || [];
+  const falta = rodadaFalta(r);
+  if (!falta.length && !r.meio) { rodadaFim(); return false; }
+  // espera a lista do Hubii aparecer (a pessoa pode estar entrando de novo depois de deslogar)
+  if (!await esperar(() => !deslogadoHubii() && (botaoFiltros() || abaDespacho()), 1800)) return false;
+  await sleep(1500);
+  const desc = r.modo === 'descritivos';
+  limparRaiz();
+  const fundo = h('div', 'ch-fundo'); const jan = h('div', 'ch-janela');
+  const topo = h('div', 'ch-topo'); topo.append(h('h2', null, (desc ? 'Descritivos' : 'Etiquetas') + ' parou no meio: continuar de onde parou?'), h('p', null, 'Provavelmente o Hubii deslogou ou a página recarregou. A memória está guardada: nada do que já foi feito se repete.'));
+  const corpo = h('div', 'ch-corpo'); const rod = h('div', 'ch-rodape');
+  const ult = r.feitos[r.feitos.length - 1];
+  corpo.append(h('div', 'ch-aviso ch-info', 'Lista confirmada: ' + r.ids.length + ' pedido(s). Feitos: ' + r.feitos.length + (ult ? ' (último: #' + ult + ')' : '') + (r.pulados.length ? '. Pulados: ' + r.pulados.length : '') + '. Faltam ' + falta.length + (falta.length ? ': ' + falta.slice(0, 12).map(x => '#' + x).join(', ') + (falta.length > 12 ? '...' : '') : '') + '. Começou às ' + hora(r.t0 || r.u) + '.'));
+  let chk = null;
+  if (r.meio) {
+    const box = h('div', 'ch-aviso ch-atencao'); chk = h('input', null, null, { type: 'checkbox' });
+    const lab = h('label'); lab.style.cursor = 'pointer';
+    lab.append(chk, document.createTextNode(desc
+      ? ' #' + r.meio + ': foi FATURADO, mas não tive confirmação de que o descritivo saiu. Marque para imprimir só o descritivo dele (sem faturar de novo). Marque só se ele NÃO saiu.'
+      : ' #' + r.meio + ': cliquei em imprimir a etiqueta, mas não tive confirmação de que ela saiu. Marque para imprimir de novo. Marque só se ela NÃO saiu.'));
+    box.append(lab); corpo.append(box);
+  }
+  corpo.append(h('div', 'ch-aviso ch-info', desc ? 'Antes de continuar, confira que a MP-4200 TH está como impressora padrão.' : 'Antes de continuar, confira que a Argox está como impressora padrão e que o ajudante de etiquetas está aberto (se não estiver, feche esta janela e use Imprimir etiquetas no painel: a lista vem certa, sem repetir).'));
+  const bOk = h('button', 'ch-b', 'Continuar de onde parou');
+  const bDepois = h('button', 'ch-s', 'Decidir depois');
+  const bDesc = h('button', 'ch-s', 'Descartar');
+  rod.append(bOk, bDepois, bDesc);
+  jan.append(topo, corpo, rod); fundo.appendChild(jan); raiz.appendChild(fundo);
+  return await new Promise(res => {
+    bOk.onclick = () => { const refazer = !!(chk && chk.checked); limparRaiz(); res(true); continuarRodada(r, refazer).catch(e => { console.error(e); fimCaixa('Erro ao continuar: ' + e.message); }); };
+    bDepois.onclick = () => { limparRaiz(); lancador(); res(true); };
+    bDesc.onclick = () => { if (!confirm('Descartar esta rodada? A memória (faturados, etiquetas impressas) continua guardada; só deixo de oferecer para continuar.')) return; rodadaFim(); limparRaiz(); lancador(); res(true); };
+  });
+}
 const pronto = async () => {
   setTimeout(migrarHistorico, 4000);
   garantirRaiz(); lancador();
+  await espelhoPronto;
+  if (rodadaLer()) { try { sessionStorage.removeItem(K_INT); } catch (e) {} await oferecerRetomada(); return; }
   let it = null; try { it = JSON.parse(sessionStorage.getItem(K_INT) || 'null'); } catch (e) {}
   if (!it || Date.now() - it.t > 10 * 60000 || !MODOS[it.modo]) return;
   sessionStorage.removeItem(K_INT);
