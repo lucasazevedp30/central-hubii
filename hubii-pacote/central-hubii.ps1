@@ -176,7 +176,7 @@ $bPainel.Font = New-Object System.Drawing.Font('Segoe UI', 9.5, [System.Drawing.
 $bPainel.Add_Click({ Rodar 'Painel.bat' })
 $barra.Controls.Add($bPainel)
 Arredondar $bPainel 10
-$versao = Rotulo 'versão 2.18.5' 650 18 92 20 9 $false $muted
+$versao = Rotulo 'versão 2.19.0' 650 18 92 20 9 $false $muted
 $versao.TextAlign = 'MiddleRight'
 $barra.Controls.Add($versao)
 

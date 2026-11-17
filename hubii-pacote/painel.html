@@ -94,6 +94,10 @@ footer .esp{flex:1}
 .lk:hover{background:none;color:var(--roxo2)}
 .mut{color:var(--suave)}.okc{color:var(--ok)}.avc{color:var(--av)}
 .prod{font-size:12.5px;line-height:1.5}
+.subabas{display:flex;gap:8px;margin:0 0 12px}
+.sub{background:var(--card);border:1px solid var(--borda);border-radius:999px;padding:7px 16px;font-size:13.5px;color:var(--suave);cursor:pointer}
+.sub.on{background:var(--roxo);border-color:var(--roxo);color:#fff}
+.mat-in{width:80px;font-family:inherit;font-size:13.5px;padding:6px 8px;border:1px solid var(--borda);border-radius:8px}
 .resumo{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--suave);margin:2px 2px 10px}
 .resumo b{color:var(--roxoEsc);font-size:15px}
 .rec{background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:14px 16px;margin-bottom:12px}
@@ -153,6 +157,8 @@ footer .esp{flex:1}
 </section>
 
 <section class="vista" id="vCompra">
+  <div class="subabas"><button class="sub on" data-s="cProd">Produtos</button><button class="sub" data-s="cMat">Materiais de separação</button></div>
+  <div id="cProd">
   <div class="filtros">
     <label>Período <select id="cPer"><option value="semana" selected>Esta semana (segunda até hoje)</option><option value="passada">Semana passada</option><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="pers">Escolher datas</option></select></label>
     <span id="cDatas" style="display:none"><label>de <input type="date" id="cDe"></label> <label>até <input type="date" id="cAte"></label></span>
@@ -177,6 +183,22 @@ footer .esp{flex:1}
     <div class="tabela"><div class="rol"><table><thead><tr><th>Produto</th><th>EAN</th><th>Motivo (Hubii)</th><th>Ação sugerida</th><th class="n">Qtd. recusada</th><th class="n">Valor perdido</th><th class="n">% da perda</th><th class="n">Saiu no período</th></tr></thead><tbody id="rCorpo"></tbody></table></div></div>
   </div>
   <p class="mut" style="font-size:12.5px;margin-top:10px">Conta os pedidos pelo dia do descritivo (ou da etiqueta ou da reimpressão, se o descritivo foi impresso antes da Central 2.12 ou fora dela). Pedidos só lidos, sem impressão, não entram. Os produtos são lidos da tela do pedido no Hubii na hora da impressão. Ação sugerida: qualquer recusa com ruptura ou quantidade insuficiente vai para "Comprar"; só "Recusado no ERP" vai para "Verificar ERP"; "Não trabalho com este produto" (sem ruptura) vai para "Não trabalha".</p>
+  </div>
+  <div id="cMat" style="display:none">
+    <div class="filtros">
+      <label>Período <select id="mPer"><option value="semana" selected>Esta semana (segunda até hoje)</option><option value="passada">Semana passada</option><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option></select></label>
+      <label>Comprar para <input type="number" id="mDias" min="1" style="width:64px"> dias</label>
+      <label>Etiquetas por rolo da Argox <input type="number" id="mCap" min="1" style="width:76px"></label>
+      <button id="mAtu">Atualizar</button>
+    </div>
+    <h2 style="margin-top:6px">Estoque e previsão</h2>
+    <div class="tabela"><div class="rol"><table><thead><tr><th>Material</th><th>Contagem</th><th class="n">Usado desde a contagem</th><th class="n">Tem agora (estimado)</th><th class="n">Média por dia</th><th class="n">Dá para</th><th class="n" id="mComprarCab">Comprar</th></tr></thead><tbody id="mEst"></tbody></table></div></div>
+    <p class="mut" style="font-size:12.5px;margin-top:6px">Conte o que tem de cada material, digite e clique em Salvar. A Central desconta o que saiu desde a contagem (sacolas pela regra abaixo; etiquetas pelas impressas). Quando chegar compra, conte de novo e salve. Sacolas em unidades; etiquetas em rolos.</p>
+    <div class="resumo" id="mRes" style="margin-top:12px"></div>
+    <h2>Sacola de cada pedido</h2>
+    <div class="tabela"><div class="rol"><table><thead><tr><th>Pedido</th><th>Saída</th><th>Sacola</th><th>Por quê</th><th>Produtos</th></tr></thead><tbody id="mPed"></tbody></table></div></div>
+    <p class="mut" style="font-size:12.5px;margin-top:10px">Regra: o peso vem do nome do produto. Pequenos (até 1 kg: petiscos, sachês, latas): até 4 unidades e menos de 1 kg = 30x20; 5 unidades ou mais, ou 1 kg ou mais = 35x45. Uma ração média (mais de 1 kg e menos de 7 kg) = 35x45; duas ou mais = 45x50. Sacaria (7 kg ou mais): duas ou mais = 50x60; uma sozinha = sem sacola (com outros itens, os outros seguem a regra). Produto sem peso no nome conta como pequeno.</p>
+  </div>
 </section>
 
 
@@ -368,7 +390,7 @@ function desenhar(s) {
   if (ALERTA_HOJE && ALERTA_HOJE.novos) {
     const a = el('div', 'alerta av', 'Compra: ' + ALERTA_HOJE.n + ' produto(s) com saída alta nos últimos 7 dias (' + ALERTA_HOJE.lim + ' un. ou mais): ' + ALERTA_HOJE.top.join('; ') + (ALERTA_HOJE.n > 3 ? '...' : '') + ' ');
     const b = el('button', '', 'Ver na Compra contínua'); b.style.marginLeft = '8px';
-    b.onclick = () => { alertaVisto(ALERTA_HOJE.eans); ALERTA_HOJE.novos = 0; a.remove(); $('cPer').value = '7'; $('cDatas').style.display = 'none'; $('cAcao').value = 'alerta'; document.querySelector('.aba[data-v="vCompra"]').click(); };
+    b.onclick = () => { alertaVisto(ALERTA_HOJE.eans); ALERTA_HOJE.novos = 0; a.remove(); $('cPer').value = '7'; $('cDatas').style.display = 'none'; $('cAcao').value = 'alerta'; document.querySelector('.sub[data-s="cProd"]').click(); document.querySelector('.aba[data-v="vCompra"]').click(); };
     a.append(b); al.append(a);
   }
   if (imp.mp === 'offline') avisa('O Windows diz que a MP-4200 TH está offline. Se ela estiver imprimindo normalmente, pode ignorar; senão, confira o cabo e se ela está ligada.', 'av');
@@ -529,6 +551,7 @@ function mostrarCompra() {
     corpo.append(tr);
   });
   mostrarRecusas(R);
+  mostrarMateriais();
 }
 
 // ---------- recusas do Hubii (colar o relatório do painel do Hubii)
@@ -719,7 +742,7 @@ $('bkFazer').onclick = async () => {
     if (!nCh && !confirm('Nenhum Chrome respondeu (a extensão não está aberta). Fazer o backup só com o histórico de pedidos e os dados deste painel?')) { m.textContent = 'Backup cancelado.'; return; }
     const historico = await (await fetch('/api/historico', { cache: 'no-store' })).text();
     const storages = {}; Object.keys(partes).forEach(k => { storages[k] = (partes[k] && partes[k].dados) || {}; });
-    const pacote = { app: 'central-hubii-backup', formato: 1, t: Date.now(), pc: ULT_ESTADO && ULT_ESTADO.pc, versao: ULT_ESTADO && ULT_ESTADO.versaoPasta, storages, historico, painel: { recusas: localStorage.getItem(K_REC), pendFeitas: localStorage.getItem(K_FEITAS) } };
+    const pacote = { app: 'central-hubii-backup', formato: 1, t: Date.now(), pc: ULT_ESTADO && ULT_ESTADO.pc, versao: ULT_ESTADO && ULT_ESTADO.versaoPasta, storages, historico, painel: { recusas: localStorage.getItem(K_REC), materiais: localStorage.getItem(K_MAT), alerta: localStorage.getItem(K_ALERTA), pendFeitas: localStorage.getItem(K_FEITAS) } };
     const blob = new Blob([JSON.stringify(pacote)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Backup-Central-Hubii-' + carimbo() + '.json'; document.body.append(a); a.click(); setTimeout(() => { a.remove(); URL.revokeObjectURL(a.href); }, 4000);
     const ev = Object.values(storages).reduce((s, d) => s + Object.keys(d).filter(k => k.startsWith('ev_')).length, 0);
@@ -738,7 +761,7 @@ $('rsArq').onchange = async () => {
   try {
     m.textContent = 'Restaurando o histórico de pedidos...';
     if (nh) await fetch('/api/restaurar-hist', { method: 'POST', headers: { 'Content-Type': 'text/plain', 'X-Central': '1' }, body: b.historico });
-    if (b.painel) { if (b.painel.recusas && !localStorage.getItem(K_REC)) localStorage.setItem(K_REC, b.painel.recusas); if (b.painel.pendFeitas) { const o = feitasLer(); let x = {}; try { x = JSON.parse(b.painel.pendFeitas) || {}; } catch (e) {} feitasGravar(Object.assign(x, o)); } }
+    if (b.painel) { if (b.painel.recusas && !localStorage.getItem(K_REC)) localStorage.setItem(K_REC, b.painel.recusas); [[K_MAT, 'materiais'], [K_ALERTA, 'alerta']].forEach(([k, c]) => { if (b.painel[c] && !localStorage.getItem(k)) localStorage.setItem(k, b.painel[c]); }); if (b.painel.pendFeitas) { const o = feitasLer(); let x = {}; try { x = JSON.parse(b.painel.pendFeitas) || {}; } catch (e) {} feitasGravar(Object.assign(x, o)); } }
     RECCACHE = null; histT = 0;
     if (!nCh) { m.textContent = 'Pronto: histórico e dados do painel restaurados.'; return; }
     const vivas = ((ULT_ESTADO && ULT_ESTADO.fontes) || []).filter(x => x.idade < 75).length;
@@ -783,6 +806,88 @@ $('atVoltar').onclick = async () => {
     aposAtualizar(m, r.versao);
   } catch (e) { m.textContent = 'Não deu certo: ' + e.message; }
 };
+
+
+// ---------- materiais de separação (sacolas e etiquetas)
+const K_MAT = 'central_materiais';
+const MATS = [{ k: '30x20', nome: 'Sacola 30x20' }, { k: '35x45', nome: 'Sacola 35x45' }, { k: '45x50', nome: 'Sacola 45x50' }, { k: '50x60', nome: 'Sacola 50x60' }, { k: 'argox', nome: 'Etiqueta da Argox', rolo: true }];
+const matLer = () => { try { return JSON.parse(localStorage.getItem(K_MAT) || '{}') || {}; } catch (e) { return {}; } };
+const matCfg = () => { const m = matLer(); return { est: m.est || {}, dias: m.dias > 0 ? m.dias : 14, cap: m.cap > 0 ? m.cap : 200 }; };
+const matGravar = c => { try { localStorage.setItem(K_MAT, JSON.stringify(c)); } catch (e) {} };
+// peso em kg tirado do nome do produto ("2,5 Kg", "400 g", "85g"); null se não tiver
+const pesoKg = n => { const m = [...String(n || '').matchAll(/(\d+(?:[.,]\d+)?)\s*(kg|g)\b/gi)].pop(); if (!m) return null; const v = parseFloat(m[1].replace(',', '.')); return /kg/i.test(m[2]) ? v : v / 1000; };
+function sacolaDe(itens) {
+  let sac = 0, med = 0, pqUn = 0, pqKg = 0;
+  (itens || []).forEach(i => { const q = i.q > 0 ? i.q : 1; const w = pesoKg(i.n); if (w != null && w >= 7) sac += q; else if (w != null && w > 1) med += q; else { pqUn += q; pqKg += (w || 0) * q; } });
+  const resto = () => {
+    if (med >= 2) return { s: '45x50', m: med + ' rações médias' };
+    if (med === 1) return { s: '35x45', m: '1 ração média' + (pqUn ? ' + ' + pqUn + ' pequeno(s)' : '') };
+    if (!pqUn) return null;
+    const kg = Math.round(pqKg * 100) / 100;
+    if (pqUn <= 4 && pqKg < 1) return { s: '30x20', m: pqUn + ' pequeno(s), ' + String(kg).replace('.', ',') + ' kg' };
+    return { s: '35x45', m: pqUn + ' pequeno(s), ' + String(kg).replace('.', ',') + ' kg' };
+  };
+  if (sac >= 2) return { sacolas: ['50x60'], motivo: sac + ' sacarias' + (med || pqUn ? ' + outros itens' : '') };
+  const r = resto();
+  if (sac === 1) return { sacolas: r ? [r.s] : [], motivo: '1 sacaria sem sacola' + (r ? '; ' + r.m : '') };
+  return { sacolas: r ? [r.s] : [], motivo: r ? r.m : 'sem itens' };
+}
+function usoMateriais(de, ate) {
+  const c = { '30x20': 0, '35x45': 0, '45x50': 0, '50x60': 0, argox: 0 }; let semProd = 0; const peds = [];
+  HIST.forEach(r => {
+    const t = tSaida(r);
+    if (t && t >= de && t <= ate) { if ((r.itens || []).length) { const b = sacolaDe(r.itens); b.sacolas.forEach(x => c[x]++); peds.push({ r, b, t }); } else semProd++; }
+    if (r.etq && r.etq >= de && r.etq <= ate) c.argox++;
+  });
+  return { c, semProd, peds };
+}
+const periodoMat = v => { const hoje = new Date(); hoje.setHours(0, 0, 0, 0); const seg = new Date(hoje); seg.setDate(seg.getDate() - ((seg.getDay() + 6) % 7)); if (v === 'semana') return [seg.getTime(), Date.now()]; if (v === 'passada') { const a = new Date(seg); a.setDate(a.getDate() - 7); return [a.getTime(), seg.getTime() - 1]; } return [inicioDias(+v), Date.now()]; };
+function mostrarMateriais() {
+  if (!$('mEst')) return;
+  const cfg = matCfg(); const agora = Date.now();
+  if (document.activeElement !== $('mDias')) $('mDias').value = cfg.dias;
+  if (document.activeElement !== $('mCap')) $('mCap').value = cfg.cap;
+  $('mComprarCab').textContent = 'Comprar (para ' + cfg.dias + ' dias)';
+  // média por dia: últimos 14 dias (ou desde o primeiro pedido com produtos, se faz menos tempo)
+  const prim = Math.min(...HIST.filter(r => (r.itens || []).length && tSaida(r)).map(tSaida));
+  const diasBase = Math.max(1, Math.min(14, Math.ceil((agora - (isFinite(prim) ? prim : agora)) / 864e5)));
+  const base = usoMateriais(agora - diasBase * 864e5, agora).c;
+  const corpo = $('mEst'); corpo.replaceChildren();
+  MATS.forEach(m => {
+    const e = cfg.est[m.k]; const tr = el('tr');
+    const inp = el('input', 'mat-in'); inp.type = 'number'; inp.min = '0'; inp.step = m.rolo ? '0.5' : '1'; if (e) inp.value = e.q;
+    const bt = el('button', '', 'Salvar'); bt.style.marginLeft = '6px';
+    bt.onclick = () => { const v = parseFloat(String(inp.value).replace(',', '.')); if (!(v >= 0)) { toast('Digite a quantidade contada.'); return; } const c = matCfg(); c.est[m.k] = { q: v, t: Date.now() }; matGravar(c); toast(m.nome + ': contagem salva.'); mostrarMateriais(); };
+    const tdC = el('td'); tdC.append(inp, document.createTextNode(m.rolo ? ' rolos' : ' un.'), bt); if (e) tdC.append(el('div', 'mut', 'contado em ' + diaHora(e.t)));
+    const media = base[m.k] / diasBase;
+    const usados = e ? usoMateriais(e.t, agora).c[m.k] : null;
+    const atual = e ? (m.rolo ? e.q * cfg.cap : e.q) - usados : null;
+    const dias = atual != null && media > 0 ? atual / media : null;
+    const precisa = Math.max(0, Math.ceil(media * cfg.dias - (atual != null ? Math.max(0, atual) : 0)));
+    const fmt = x => { if (!m.rolo) return x + ' un.'; const r = Math.round(10 * x / cfg.cap) / 10; return x + ' etiq.' + (r >= 0.5 ? ' (' + String(r).replace('.', ',') + ' rolo' + (r >= 2 ? 's' : '') + ')' : ''); };
+    const tdD = el('td', 'n ' + (dias != null && dias < 3 ? 'avc' : ''), dias == null ? (e ? 'sem consumo' : '—') : (dias < 1 ? 'menos de 1 dia' : Math.floor(dias) + ' dia(s)'));
+    const tdP = el('td', 'n'); if (precisa) tdP.append(el('span', 'tag e', m.rolo ? Math.ceil(precisa / cfg.cap) + ' rolo(s)' : precisa + ' un.')); else tdP.append(el('span', 'mut', e ? 'não precisa' : '—'));
+    tr.append(el('td', '', m.nome), tdC, el('td', 'n', usados == null ? '—' : fmt(usados)), el('td', 'n ' + (atual != null && atual < 0 ? 'avc' : ''), atual == null ? 'conte e salve' : fmt(Math.round(atual))), el('td', 'n', (Math.round(media * 10) / 10).toString().replace('.', ',') + (m.rolo ? ' etiq.' : ' un.')), tdD, tdP);
+    corpo.append(tr);
+  });
+  // consumo e sacola de cada pedido no período escolhido
+  const [de, ate] = periodoMat($('mPer').value); const U = usoMateriais(de, ate);
+  const res = $('mRes'); res.replaceChildren();
+  MATS.forEach(m => { const x = el('span'); x.append(el('b', '', U.c[m.k]), document.createTextNode(' ' + m.nome.toLowerCase().replace('sacola ', 'sacola(s) ').replace('etiqueta da argox', 'etiqueta(s) Argox'))); res.append(x); });
+  res.append(el('span', '', dataDe(de) + ' a ' + dataDe(ate) + ' · média de ' + diasBase + ' dia(s)'));
+  if (U.semProd) res.append(el('span', 'avc', U.semProd + ' pedido(s) sem produtos lidos (fora da conta de sacolas)'));
+  const pc = $('mPed'); pc.replaceChildren();
+  U.peds.sort((a, b) => b.t - a.t).slice(0, 600).forEach(x => {
+    const tr = el('tr'); const tdS = el('td'); if (x.b.sacolas.length) x.b.sacolas.forEach(sz => tdS.append(el('span', 'tag n', sz))); else tdS.append(el('span', 'mut', 'sem sacola'));
+    tr.append(el('td', '', x.r.id), el('td', 'mut', diaHora(x.t)), tdS, el('td', 'mut', x.b.motivo), el('td', 'mut', (x.r.itens || []).map(i => (i.q != null ? i.q + 'x ' : '') + (i.n || i.e)).join('; ')));
+    pc.append(tr);
+  });
+  if (!U.peds.length) { const tr = el('tr'); const td = el('td', 'mut', 'Nenhum pedido com produtos lidos no período.'); td.colSpan = 5; tr.append(td); pc.append(tr); }
+}
+document.querySelectorAll('.sub').forEach(b => b.onclick = () => { document.querySelectorAll('.sub').forEach(x => x.classList.toggle('on', x === b)); $('cProd').style.display = b.dataset.s === 'cProd' ? '' : 'none'; $('cMat').style.display = b.dataset.s === 'cMat' ? '' : 'none'; if (b.dataset.s === 'cMat') carregarHist().then(mostrarMateriais); });
+$('mPer').addEventListener('input', mostrarMateriais);
+$('mAtu').onclick = () => carregarHist(true).then(mostrarMateriais);
+['mDias', 'mCap'].forEach(k => $(k).addEventListener('change', () => { const c = matCfg(); const v = parseInt($(k).value, 10); if (v > 0) { if (k === 'mDias') c.dias = v; else c.cap = v; matGravar(c); } mostrarMateriais(); }));
 
 // ---------- alerta de saída na aba Hoje (últimos 7 dias; recalcula a cada 10 minutos)
 let ALERTA_HOJE = null;

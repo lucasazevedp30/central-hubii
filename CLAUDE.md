@@ -76,5 +76,10 @@ extensão (apaga os dados); recarregar sempre da mesma pasta.
   já tem o seu próprio (confirmado pelo usuário em 17/11). Ler BR e Reimprimir: opcionais, baixa prioridade.
 - Alertas de compra: alerta de SAÍDA feito na 2.17.4 (limite e marcas sem alerta; padrão Royal Canin e Premier,
   que têm estoque alto). Estoque do OnePet não é confiável (físico x virtual): não usar.
+- Materiais de separação (2.19.0, sub-aba da Compra contínua, `painel.html` `sacolaDe`): peso tirado do nome do
+  produto. Pequenos (até 1 kg): até 4 un. e < 1 kg = 30x20; 5+ un. ou >= 1 kg = 35x45. 1 ração média (>1 e <7 kg) =
+  35x45; 2+ = 45x50. Sacaria (>= 7 kg): 2+ = 50x60; 1 sozinha = sem sacola (outros itens seguem a regra). Etiqueta
+  Argox = 1 por pedido, rolo de 200. Estoque: o usuário digita a contagem; a Central desconta o que saiu desde ela.
+  Regras combinadas com o usuário em 17/11; ajustar aqui e no código se ele pedir.
 - Reembolso da Shopee: esperando retorno do responsável. Vídeo: esperando áudios do ElevenLabs.
 - Por último (quando o resto estiver 100%): outras lojas — configuração por loja, instalador, fixar ID da extensão.
