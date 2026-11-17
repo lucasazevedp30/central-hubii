@@ -895,7 +895,8 @@ function procurarProduto() {
       }
       if (!ids.length) { msg('Não li nenhum pedido na aba Despacho.', 'ch-erro'); return; }
       const badge = badgeDespacho();
-      if ((total != null && total !== ids.length) || (badge != null && badge !== ids.length))
+      // o número no botão da aba Despacho não é o total da lista (ex.: 99 com 159 na lista): só compara com ele quando a lista veio da tela
+      if ((total != null && total !== ids.length) || (!api.ok && badge != null && badge !== ids.length))
         extra.push('Atenção: li ' + ids.length + ' pedidos, mas ' + (total != null ? 'a lista indica ' + total : '') + (badge != null ? (total != null ? ' e ' : '') + 'a aba Despacho indica ' + badge : '') + '. Se houver filtro ativo (botão Filtros), limpe e busque de novo.');
       // 2) produtos: primeiro a leitura guardada e o Histórico de pedidos; só abre no Hubii os que faltam
       const cache = prodLer();
