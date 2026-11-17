@@ -1,8 +1,8 @@
 {
-  "versao": "2.17.4",
-  "arquivo": "versoes/hubii-central-2.17.4.zip",
-  "sha256": "7eafaebf4ea06453731bb3f48577e6650e241bf26b1344e47472a6c5653da51f",
-  "tamanho": 983662,
-  "data": "2026-11-16T19:26:04Z",
-  "novidades": "- Procurar pedido pelo EAN: lê a lista completa da aba Despacho pelo servidor do Hubii e responde primeiro pelo Histórico de pedidos; só abre no Hubii os pedidos ainda sem produtos anotados (bem mais rápido).\n- Alerta de saída na Compra contínua: produtos que saíram a partir de um limite (padrão 10 un.) ganham a etiqueta \"saída alta\". Marcas sem alerta: Royal Canin e Premier (dá para mudar).\n- Aviso na aba Hoje com os produtos de saída alta dos últimos 7 dias, e coluna \"Alerta\" na planilha da compra."
+  "versao": "2.17.5",
+  "arquivo": "versoes/hubii-central-2.17.5.zip",
+  "sha256": "56a802e2f0bb87c14227a4663265d8e299a04da325a3d0c0c8c423c95fa48c02",
+  "tamanho": 983864,
+  "data": "2026-11-17T00:10:47Z",
+  "novidades": "- O aviso de compra na aba Hoje some depois que você clica em \"Ver na Compra contínua\". Ele só volta se um produto novo entrar no alerta de saída."
 }
