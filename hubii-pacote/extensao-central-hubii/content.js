@@ -332,13 +332,16 @@ async function completarPelaBusca(ids, conhecidos) {
 }
 async function acharPedido(id) {
   let p = lerLista().find(x => x.id === id); if (p) return p;
-  const c = campoBuscaH();
-  if (c && c.value) { setBuscaH(c, ''); await sleep(1500); await esperar(() => lerLista().length > 0, 10); }
-  p = await naLista(id); if (p) return p;
-  const c2 = await esperar(campoBuscaH, 10); if (!c2) return null;
-  log('#' + id + ': não aparece nas páginas da lista; procurando pelo número na busca do Hubii...');
-  setBuscaH(c2, id); await sleep(2200);
-  return await esperar(() => lerLista().find(x => x.id === id), 8);
+  // primeiro a busca do Hubii pelo número: mostra o pedido direto, sem passar páginas (bem mais rápido)
+  const c = await esperar(campoBuscaH, 5);
+  if (c) {
+    setBuscaH(c, id); await sleep(1200);
+    p = await esperar(() => lerLista().find(x => x.id === id), 8); if (p) return p;
+    log('#' + id + ': não apareceu na busca do Hubii; procurando nas páginas da lista...');
+    setBuscaH(c, ''); await sleep(1500); await esperar(() => lerLista().length > 0, 10);
+  }
+  // reserva: passa as páginas da lista
+  return await naLista(id);
 }
 const limparBusca = () => { try { const c = campoBuscaH(); if (c && c.value) setBuscaH(c, ''); } catch (e) {} };
 
