@@ -1,8 +1,8 @@
 {
-  "versao": "2.18.2",
-  "arquivo": "versoes/hubii-central-2.18.2.zip",
-  "sha256": "7d6786dffeb5437382420db83dec8df87de71d2f3adbc8fc286ec0fb5ac5a265",
-  "tamanho": 986441,
-  "data": "2026-11-17T13:40:34Z",
-  "novidades": "- Correção: quando o Hubii demora para abrir um pedido, a Central espera mais um pouco em vez de parar a rotina (foi o que parou os descritivos hoje).\n- Correção: com uma rodada antiga guardada, o botão Imprimir descritivos/etiquetas do painel podia não começar nada.\n- A leitura da lista não fica mais parada vários minutos quando a página do Hubii foi aberta antes de atualizar (F5 resolve de vez)."
+  "versao": "2.18.3",
+  "arquivo": "versoes/hubii-central-2.18.3.zip",
+  "sha256": "37a32ff46b22548a990a84837947b9d2f970610be5db9a91e72e90a5ff9d29c2",
+  "tamanho": 986480,
+  "data": "2026-11-17T14:11:07Z",
+  "novidades": "- Mais rápido: para achar o próximo pedido, a Central usa primeiro a busca do Hubii pelo número, em vez de passar as páginas da lista. Em listas com mais de uma página, cada pedido fica cerca de 3 vezes mais rápido."
 }
