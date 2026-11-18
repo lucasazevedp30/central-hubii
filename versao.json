@@ -1,8 +1,8 @@
 {
-  "versao": "2.20.1",
-  "arquivo": "versoes/hubii-central-2.20.1.zip",
-  "sha256": "e1480ee38fce3f467edee9e48f39ea6540f6f091a13a31c0efa65d46d807afb3",
-  "tamanho": 992620,
-  "data": "2026-11-17T19:51:07Z",
-  "novidades": "- Sachês em caixa fechada: na Compra contínua (Produtos e Resumo da semana), a saída dos sachês aparece também em caixas (ex.: 36 un. = 2 cx de 18). Também na planilha e no texto do \"Copiar resumo\".\n- Tamanho das caixas editável em Produtos > \"Caixa fechada dos sachês\" (Pedigree 18, Pedigree High Protein 20, Whiskas 20, Friskies 15, Royal Canin 12, Premier 20, Dog Chow 15)."
+  "versao": "2.20.2",
+  "arquivo": "versoes/hubii-central-2.20.2.zip",
+  "sha256": "027ad91dc50cccc197ee4e833dc86a85f68a5116d0636f2c39bdea01252b4f2f",
+  "tamanho": 992992,
+  "data": "2026-11-18T14:17:23Z",
+  "novidades": "- Etiquetas: a frase sobre pedidos da memória que não estão em Esperando Expedição não diz mais \"aguardando a NFe\" por palpite. Agora mostra o status real de cada pedido (ex.: Cancelado, Em trânsito, fora da aba Despacho) lido no servidor do Hubii."
 }
