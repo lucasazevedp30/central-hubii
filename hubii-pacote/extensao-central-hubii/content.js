@@ -283,17 +283,18 @@ async function lerApi(statusRotulo) {
   const alvo = statusRotulo ? nt(statusRotulo) : null; let ultimo = '';
   for (const [ordem, por] of [['next_sla', 500], ['order_id', 100], ['accepted_at', 100], ['next_sla', 100]]) {
     try {
-      const ids = []; let total = null, paginas = 1;
+      const ids = []; const mapa = {}; let total = null, paginas = 1;
       for (let pag = 1; pag <= paginas && pag <= 60; pag++) {
         const j = await pedir(ordem, pag, por);
         if (!j || !Array.isArray(j.data)) throw new Error('resposta sem lista');
         total = Number(j.total); paginas = Number(j.total_pages) || 1;
         j.data.forEach(o => {
           const id = String(o.order_id || '');
+          if (/^\d{5,9}$/.test(id)) mapa[id] = String(o.delivery_status_str || '');
           if (/^\d{5,9}$/.test(id) && (!alvo || nt(o.delivery_status_str) === alvo) && (!o.expedition_type || o.expedition_type === 'drop_off') && !ids.includes(id)) ids.push(id);
         });
       }
-      if (Number.isFinite(total) && ids.length === total) return { ok: true, ids, total, ordem };
+      if (Number.isFinite(total) && ids.length === total) return { ok: true, ids, total, ordem, mapa };
       ultimo = 'li ' + ids.length + ' de ' + total + ' (ordem ' + ordem + ')';
     } catch (e) {
       ultimo = e.message + ' (ordem ' + ordem + ')';
@@ -603,6 +604,15 @@ async function executarDescritivos(ids, info) {
 }
 
 /* ---------- Etiquetas ---------- */
+// pedidos que têm descritivo na memória (72 h), nunca tiveram etiqueta impressa pela Central e não estão em "Esperando Expedição"
+// (impressos à mão, cancelados, em outro status...). Mostra o status real quando o servidor do Hubii respondeu.
+function avisoNaoApareceu(d) {
+  const l = d.naoApareceu || []; if (!l.length) return '';
+  const st = d.statusNao;
+  const nome = id => '#' + id + ' (' + (st ? (st[id] || 'fora da aba Despacho') : 'status não lido') + ')';
+  const nfe = st && l.some(id => /nfe/i.test(nt(st[id] || '')));
+  return 'Na memória dos descritivos, sem etiqueta impressa pela Central, mas fora de "Esperando Expedição": ' + l.length + ' - ' + l.slice(0, 6).map(nome).join(', ') + (l.length > 6 ? '...' : '') + '. Podem ter sido impressos à mão, cancelados ou estar em outro status; não entram nesta lista.' + (nfe ? ' Os que estão aguardando a NFe: quando liberarem, rode de novo.' : '');
+}
 async function levantarEtiquetas(reimprimir) {
   const lp = await lerPedidosDoStatus(); const tela = lp.ids;
   const total = lp.total;
@@ -617,7 +627,10 @@ async function levantarEtiquetas(reimprimir) {
     : { id, nota: 'na memória (descritivo ' + horaDe(id) + ') · falta imprimir', estado: 'ok', marcado: true });
   fora.forEach(id => itens.push({ id, nota: 'FORA da memória dos descritivos (ex.: impresso à mão): só imprime se você marcar', estado: 'fora', marcado: false }));
   const naoApareceu = filaIds.filter(id => !tela.includes(id) && !hs.has(id));
-  return { tela: tela.length, totalTela: total, itens, memoria: fila.length, naoApareceu };
+  // status real dos que não estão em Esperando Expedição (todos os status da aba Despacho, uma leitura só)
+  let statusNao = null;
+  if (naoApareceu.length && usouApi && usouApi.ok) { try { const t = await lerApi(null); if (t.ok) statusNao = t.mapa; } catch (e) {} }
+  return { tela: tela.length, totalTela: total, itens, memoria: fila.length, naoApareceu, statusNao };
 }
 async function rodarEtiquetas() {
   MODO = MODOS.etiquetas;
@@ -634,7 +647,7 @@ async function rodarEtiquetas() {
     i.push('Memória dos descritivos: ' + d.memoria + ' pedido(s) gravados nas últimas 72h.');
     if (!d.memoria) i.push('ATENÇÃO: não há memória de descritivos. Nenhum pedido está marcado; marque à mão os que quiser imprimir.');
     if (ignoradasStatus.length) i.push('Linhas da tela que eu NÃO reconheci como "Esperando Expedição" (ficaram de fora): ' + ignoradasStatus.length + ' (' + ignoradasStatus.slice(0, 6).map(x => '#' + x).join(', ') + (ignoradasStatus.length > 6 ? '...' : '') + '). Se elas estão em Esperando Expedição no Hubii, me mande um print de uma dessas linhas.');
-    if (d.naoApareceu.length) i.push('Na memória, mas ainda NÃO estão em "Esperando Expedição" (aguardando a NFe): ' + d.naoApareceu.length + ' (' + d.naoApareceu.slice(0, 6).map(x => '#' + x).join(', ') + (d.naoApareceu.length > 6 ? '...' : '') + '). Quando liberarem, rode de novo.');
+    { const a = avisoNaoApareceu(d); if (a) i.push(a); }
     return i;
   };
   limparRaiz('ch-caixa');
