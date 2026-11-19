@@ -87,6 +87,13 @@ extensão (apaga os dados); recarregar sempre da mesma pasta.
   saiu e foi recusado por ruptura. O relatório do Hubii não traz datas: o usuário informa o período ao colar (campos
   de/até, padrão seg-sex da semana atual); sem período, assume a semana da colagem. Avisa se o período difere da
   semana mostrada. Só um relatório fica guardado (`central_recusas`: t, txt, de, ate).
+- Produto novo / voltou (2.22.0, `painel.html` `mapaNovos`): a partir do histórico de pedidos com produtos. Novo = primeira
+  venda na história da Central dentro da janela (14 dias, editável) E com pelo menos 14 dias de histórico antes dela;
+  voltou = primeira venda dentro da janela depois de 30 dias parado (editável). A Central só anota produtos desde
+  14/11/2026, então "novo" só vale a partir de 28/11 e "voltou" a partir de 14/12 (a tela explica). Marcas nas tabelas
+  Produtos e Resumo (bloco "Entrou no portfólio"), filtro "Só novos e que voltaram" e aviso na aba Hoje (some depois de visto).
+  Memórias: descritivos 72 h; etiquetas impressas e códigos BR 14 dias; histórico de pedidos 60 dias na extensão e
+  400 dias no arquivo do painel.
 - Caixa fechada dos sachês (2.20.1, editável na aba Produtos, `painel.html` `caixaDe`): Pedigree High Protein 20,
   Pedigree 18, Whiskas 20, Friskies 15, Royal Canin 12, Premier 20, Dog Chow 15. Sachê = "sachê" no nome ou ração
   úmida <= 100 g que não seja lata (o Friskies vem sem "sachê" no nome). A compra desses sachês é por caixa.

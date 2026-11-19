@@ -98,6 +98,7 @@ footer .esp{flex:1}
 @media (max-width:860px){.duas{grid-template-columns:1fr}}
 .metricas.cinco{grid-template-columns:repeat(5,minmax(0,1fr))}
 @media (max-width:860px){.metricas.cinco{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tag.nv{background:#E1EEFF;color:#0B4FA8}.tag.vt{background:#DDF3F0;color:#0B6B5F}
 .subabas{display:flex;gap:8px;margin:0 0 12px}
 .sub{background:var(--card);border:1px solid var(--borda);border-radius:999px;padding:7px 16px;font-size:13.5px;color:var(--suave);cursor:pointer}
 .sub.on{background:var(--roxo);border-color:var(--roxo);color:#fff}
@@ -167,12 +168,16 @@ footer .esp{flex:1}
     <label>Período <select id="cPer"><option value="semana" selected>Esta semana (segunda até hoje)</option><option value="passada">Semana passada</option><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="pers">Escolher datas</option></select></label>
     <span id="cDatas" style="display:none"><label>de <input type="date" id="cDe"></label> <label>até <input type="date" id="cAte"></label></span>
     <input type="search" id="cBusca" placeholder="Filtrar por nome, marca ou EAN" style="min-width:200px">
-    <label>Mostrar <select id="cAcao"><option value="">Tudo</option><option value="Comprar (ruptura)">Só o que preciso comprar</option><option value="Verificar ERP">Só verificar no ERP</option><option value="Não trabalha">Só não trabalha</option><option value="cruz">Só o que saiu e teve recusa</option><option value="alerta">Só alertas de saída</option></select></label>
+    <label>Mostrar <select id="cAcao"><option value="">Tudo</option><option value="Comprar (ruptura)">Só o que preciso comprar</option><option value="Verificar ERP">Só verificar no ERP</option><option value="Não trabalha">Só não trabalha</option><option value="cruz">Só o que saiu e teve recusa</option><option value="alerta">Só alertas de saída</option><option value="novo">Só novos e que voltaram</option></select></label>
     <label title="Produto que saiu esta quantidade ou mais no período ganha o alerta">Alerta de saída a partir de <input type="number" id="cLim" min="1" style="width:64px"> un.</label>
     <label title="Marcas com bastante estoque na loja: não geram alerta (separe por vírgula)">Sem alerta para <input type="text" id="cIgn" style="width:180px" placeholder="marcas, separadas por vírgula"></label>
     <button id="cAtu">Atualizar</button>
     <button class="pri" id="cXlsx">Baixar planilha da compra</button>
   </div>
+  <details class="rec" id="nvBox" style="margin-bottom:12px"><summary style="cursor:pointer"><b>Produto novo / voltou</b> <span class="mut" style="font-size:12.5px">(marcas ao lado do nome do produto)</span></summary>
+    <p class="mut" style="font-size:12.5px;margin:8px 0"><b>Novo</b>: primeira venda do produto na história da Central. <b>Voltou</b>: produto que já saía, ficou parado e saiu de novo. As marcas aparecem pelo tempo abaixo. A Central só marca "novo" depois de ter esse mesmo tempo de histórico antes da primeira venda (ela começou a anotar produtos em 14/11).</p>
+    <div class="lin"><label class="mut">Marcar por <input type="number" id="nvDias" min="1" style="width:64px"> dias</label><label class="mut">"Voltou" depois de <input type="number" id="nvParado" min="1" style="width:64px"> dias sem sair</label><span class="mut" id="nvMsg" style="font-size:12.5px"></span></div>
+  </details>
   <details class="rec" id="cxBox" style="margin-bottom:12px"><summary style="cursor:pointer"><b>Caixa fechada dos sachês</b> <span class="mut" style="font-size:12.5px">(a saída dos sachês aparece também em caixas)</span></summary>
     <p class="mut" style="font-size:12.5px;margin:8px 0">Uma linha por marca: <b>marca = unidades na caixa</b>. Vale para sachês: "sachê" no nome, ou ração úmida de até 100 g que não seja lata. Quando uma marca tem linha especial (ex.: Pedigree High Protein), deixe a especial antes da comum.</p>
     <textarea id="cxTxt" style="min-height:150px"></textarea>
@@ -192,6 +197,7 @@ footer .esp{flex:1}
     <h2>Recusas e o que fazer</h2>
     <div class="tabela"><div class="rol"><table><thead><tr><th>Produto</th><th>EAN</th><th>Motivo (Hubii)</th><th>Ação sugerida</th><th class="n">Qtd. recusada</th><th class="n">Valor perdido</th><th class="n">% da perda</th><th class="n">Saiu no período</th></tr></thead><tbody id="rCorpo"></tbody></table></div></div>
   </div>
+  <p class="mut" id="cNovoNota" style="font-size:12.5px;margin-top:10px"></p>
   <p class="mut" style="font-size:12.5px;margin-top:10px">Conta os pedidos pelo dia do descritivo (ou da etiqueta ou da reimpressão, se o descritivo foi impresso antes da Central 2.12 ou fora dela). Pedidos só lidos, sem impressão, não entram. Os produtos são lidos da tela do pedido no Hubii na hora da impressão. Ação sugerida: qualquer recusa com ruptura ou quantidade insuficiente vai para "Comprar"; só "Recusado no ERP" vai para "Verificar ERP"; "Não trabalho com este produto" (sem ruptura) vai para "Não trabalha".</p>
   </div>
   <div id="cResumo" style="display:none">
@@ -207,6 +213,9 @@ footer .esp{flex:1}
       <div>
         <h2 style="margin-top:0">Produtos que mais saíram</h2>
         <div class="tabela"><div class="rol"><table><thead><tr><th>#</th><th>Produto</th><th class="n">Unidades</th><th class="n">Pedidos</th></tr></thead><tbody id="sTop"></tbody></table></div></div>
+        <h2>Entrou no portfólio</h2>
+        <div class="tabela"><div class="rol"><table><thead><tr><th>Produto</th><th>Situação</th><th class="n">Unidades</th><th class="n">Pedidos</th></tr></thead><tbody id="sNovos"></tbody></table></div></div>
+        <p class="mut" id="sNovoNota" style="font-size:12.5px;margin-top:6px"></p>
       </div>
       <div>
         <h2 style="margin-top:0">Sacolas e etiquetas usadas</h2>
@@ -421,6 +430,12 @@ function desenhar(s) {
     b.onclick = () => { document.querySelector('.aba[data-v="vAjuda"]').click(); mostrarOnline(ONLINE); $('atOnline').scrollIntoView({ behavior: 'smooth', block: 'center' }); };
     a.append(b); al.append(a);
   }
+  if (NOVOS_HOJE && NOVOS_HOJE.novos) {
+    const a = el('div', 'alerta ok', 'Portfólio: ' + NOVOS_HOJE.n + ' produto(s) novo(s) ou que voltaram nos últimos ' + NOVOS_HOJE.dias + ' dias: ' + NOVOS_HOJE.top.join('; ') + (NOVOS_HOJE.n > 3 ? '...' : '') + ' ');
+    const b = el('button', '', 'Ver na Compra contínua'); b.style.marginLeft = '8px';
+    b.onclick = () => { novoVisto(NOVOS_HOJE.ks); NOVOS_HOJE.novos = 0; a.remove(); $('cPer').value = '30'; $('cDatas').style.display = 'none'; $('cAcao').value = 'novo'; document.querySelector('.sub[data-s="cProd"]').click(); document.querySelector('.aba[data-v="vCompra"]').click(); };
+    a.append(b); al.append(a);
+  }
   if (ALERTA_HOJE && ALERTA_HOJE.novos) {
     const a = el('div', 'alerta av', 'Compra: ' + ALERTA_HOJE.n + ' produto(s) com saída alta nos últimos 7 dias (' + ALERTA_HOJE.lim + ' un. ou mais): ' + ALERTA_HOJE.top.join('; ') + (ALERTA_HOJE.n > 3 ? '...' : '') + ' ');
     const b = el('button', '', 'Ver na Compra contínua'); b.style.marginLeft = '8px';
@@ -565,7 +580,7 @@ function somarCompra() {
   const [de, ate] = periodoCompra(), q = norm($('cBusca').value.trim());
   const S = somarSaida(de, ate);
   const fa = $('cAcao').value, rp = recPorEan();
-  const lista = S.todos.filter(a => (!q || a.e.includes(q) || norm(a.n).includes(q)) && (!fa || (fa === 'alerta' ? a.alerta : (rp.has(a.e) && (fa === 'cruz' || rp.get(a.e).acao === fa))))).sort((a, b) => b.un - a.un || b.peds.size - a.peds.size);
+  const lista = S.todos.filter(a => (!q || a.e.includes(q) || norm(a.n).includes(q)) && (!fa || (fa === 'alerta' ? a.alerta : fa === 'novo' ? mapaNovos(Math.min(ate, Date.now())).has(a.e) : (rp.has(a.e) && (fa === 'cruz' || rp.get(a.e).acao === fa))))).sort((a, b) => b.un - a.un || b.peds.size - a.peds.size);
   return { de, ate, peds: S.peds, semProd: S.semProd, lista, alertas: S.todos.filter(a => a.alerta).length, cfg: S.cfg };
 }
 function mostrarCompra() {
@@ -581,10 +596,12 @@ function mostrarCompra() {
     const rc = recPorEan().get(a.e); const tdR = el('td');
     if (rc) { tdR.append(el('span', 'tag ' + rc.cls, rc.acao), document.createTextNode(' ' + rc.q + ' un.')); } else tdR.append(el('span', 'mut', '—'));
     const tdN = el('td', '', a.n || '(sem nome)'); if (a.alerta) { tdN.append(document.createTextNode(' ')); tdN.append(el('span', 'tag e', 'saída alta')); }
+    { const nv = mapaNovos(Math.min(R.ate, Date.now())).get(a.e); if (nv) { tdN.append(document.createTextNode(' ')); tdN.append(tagNovo(nv)); } }
     tr.append(tdN, el('td', 'mut', a.e), tdUnidades(a, a.semQtd ? '*' : ''), el('td', 'n', a.peds.size), el('td', 'n', (a.un / a.peds.size).toFixed(1).replace('.', ',')), el('td', 'mut', diaHora(a.ult)), tdR);
     corpo.append(tr);
   });
   mostrarRecusas(R);
+  $('cNovoNota').textContent = novoNota(Math.min(R.ate, Date.now()));
   mostrarMateriais();
 }
 
@@ -624,7 +641,7 @@ function mostrarRecusas(R) {
   $('rBloco').style.display = 'block';
   const corpo = $('rCorpo'); corpo.replaceChildren();
   const fa = $('cAcao').value, q = norm($('cBusca').value.trim());
-  recs.filter(r => (!fa || (fa === 'cruz' || fa === 'alerta' ? saiu.has(r.e) : r.acao === fa)) && (!q || r.e.includes(q) || norm(r.n).includes(q) || norm(r.marca).includes(q))).sort((a, b) => (b.v || 0) - (a.v || 0)).forEach(r => {
+  recs.filter(r => (!fa || (['cruz', 'alerta', 'novo'].includes(fa) ? saiu.has(r.e) : r.acao === fa)) && (!q || r.e.includes(q) || norm(r.n).includes(q) || norm(r.marca).includes(q))).sort((a, b) => (b.v || 0) - (a.v || 0)).forEach(r => {
     const tr = el('tr'); const tdA = el('td'); tdA.append(el('span', 'tag ' + r.cls, r.acao));
     const s = saiu.get(r.e);
     tr.append(el('td', '', r.n), el('td', 'mut', r.e), el('td', 'mut', r.motivo), tdA, el('td', 'n', r.q), el('td', 'n', brl(r.v)), el('td', 'n', r.pct != null ? r.pct.toFixed(1).replace('.', ',') + '%' : ''), el('td', 'n ' + (s ? 'okc' : 'mut'), s ? s + ' un.' : '—'));
@@ -684,7 +701,7 @@ $('cXlsx').onclick = () => {
     rs.linhas.push([]); rs.linhas.push([P.cel('Saída ' + per, nb), P.cel(R.peds.length + ' pedidos', c), P.cel(R.lista.reduce((s, a) => s + a.un, 0) + ' unidades', c), P.cel(R.lista.length + ' produtos', c)]);
     const rc = P.novaPlanilha('Recusas', 'FFB3261E'); rc.larguras = [70, 16, 18, 36, 18, 12, 16, 10, 16]; rc.congelar = [0, 1];
     rc.linhas.push(['Produto', 'EAN', 'Marca', 'Motivo (Hubii)', 'Ação sugerida', 'Qtd. recusada', 'Valor perdido (R$)', '% da perda', 'Saiu no período (un.)'].map(t => P.cel(t, cab)));
-    recs.filter(r => { const fa = $('cAcao').value; return !fa || (fa === 'cruz' || fa === 'alerta' ? saiu.has(r.e) : r.acao === fa); }).sort((a, b) => (b.v || 0) - (a.v || 0)).forEach(r => rc.linhas.push([P.cel(r.n, c), P.cel(r.e, c), P.cel(r.marca, c), P.cel(r.motivo, c), P.cel(r.acao, c), P.cel(r.q, c), P.cel(r.v, est.get({ borda: true, fmt: '#,##0.00' })), P.cel(r.pct != null ? r.pct / 100 : null, est.get({ borda: true, fmt: '0.0%' })), P.cel(saiu.get(r.e) || null, c)]));
+    recs.filter(r => { const fa = $('cAcao').value; return !fa || (['cruz', 'alerta', 'novo'].includes(fa) ? saiu.has(r.e) : r.acao === fa); }).sort((a, b) => (b.v || 0) - (a.v || 0)).forEach(r => rc.linhas.push([P.cel(r.n, c), P.cel(r.e, c), P.cel(r.marca, c), P.cel(r.motivo, c), P.cel(r.acao, c), P.cel(r.q, c), P.cel(r.v, est.get({ borda: true, fmt: '#,##0.00' })), P.cel(r.pct != null ? r.pct / 100 : null, est.get({ borda: true, fmt: '0.0%' })), P.cel(saiu.get(r.e) || null, c)]));
     planilhas.unshift(rs); planilhas.push(rc);
   }
   P.baixar('Compra-continua-' + carimbo() + '.xlsx', P.empacotar({ planilhas, est }));
@@ -778,7 +795,7 @@ $('bkFazer').onclick = async () => {
     if (!nCh && !confirm('Nenhum Chrome respondeu (a extensão não está aberta). Fazer o backup só com o histórico de pedidos e os dados deste painel?')) { m.textContent = 'Backup cancelado.'; return; }
     const historico = await (await fetch('/api/historico', { cache: 'no-store' })).text();
     const storages = {}; Object.keys(partes).forEach(k => { storages[k] = (partes[k] && partes[k].dados) || {}; });
-    const pacote = { app: 'central-hubii-backup', formato: 1, t: Date.now(), pc: ULT_ESTADO && ULT_ESTADO.pc, versao: ULT_ESTADO && ULT_ESTADO.versaoPasta, storages, historico, painel: { recusas: localStorage.getItem(K_REC), materiais: localStorage.getItem(K_MAT), alerta: localStorage.getItem(K_ALERTA), caixas: localStorage.getItem(K_CX), pendFeitas: localStorage.getItem(K_FEITAS) } };
+    const pacote = { app: 'central-hubii-backup', formato: 1, t: Date.now(), pc: ULT_ESTADO && ULT_ESTADO.pc, versao: ULT_ESTADO && ULT_ESTADO.versaoPasta, storages, historico, painel: { recusas: localStorage.getItem(K_REC), materiais: localStorage.getItem(K_MAT), alerta: localStorage.getItem(K_ALERTA), caixas: localStorage.getItem(K_CX), novo: localStorage.getItem(K_NOVO), pendFeitas: localStorage.getItem(K_FEITAS) } };
     const blob = new Blob([JSON.stringify(pacote)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Backup-Central-Hubii-' + carimbo() + '.json'; document.body.append(a); a.click(); setTimeout(() => { a.remove(); URL.revokeObjectURL(a.href); }, 4000);
     const ev = Object.values(storages).reduce((s, d) => s + Object.keys(d).filter(k => k.startsWith('ev_')).length, 0);
@@ -797,7 +814,7 @@ $('rsArq').onchange = async () => {
   try {
     m.textContent = 'Restaurando o histórico de pedidos...';
     if (nh) await fetch('/api/restaurar-hist', { method: 'POST', headers: { 'Content-Type': 'text/plain', 'X-Central': '1' }, body: b.historico });
-    if (b.painel) { if (b.painel.recusas && !localStorage.getItem(K_REC)) localStorage.setItem(K_REC, b.painel.recusas); [[K_MAT, 'materiais'], [K_ALERTA, 'alerta'], [K_CX, 'caixas']].forEach(([k, c]) => { if (b.painel[c] && !localStorage.getItem(k)) localStorage.setItem(k, b.painel[c]); }); if (b.painel.pendFeitas) { const o = feitasLer(); let x = {}; try { x = JSON.parse(b.painel.pendFeitas) || {}; } catch (e) {} feitasGravar(Object.assign(x, o)); } }
+    if (b.painel) { if (b.painel.recusas && !localStorage.getItem(K_REC)) localStorage.setItem(K_REC, b.painel.recusas); [[K_MAT, 'materiais'], [K_ALERTA, 'alerta'], [K_CX, 'caixas'], [K_NOVO, 'novo']].forEach(([k, c]) => { if (b.painel[c] && !localStorage.getItem(k)) localStorage.setItem(k, b.painel[c]); }); if (b.painel.pendFeitas) { const o = feitasLer(); let x = {}; try { x = JSON.parse(b.painel.pendFeitas) || {}; } catch (e) {} feitasGravar(Object.assign(x, o)); } }
     RECCACHE = null; histT = 0;
     if (!nCh) { m.textContent = 'Pronto: histórico e dados do painel restaurados.'; return; }
     const vivas = ((ULT_ESTADO && ULT_ESTADO.fontes) || []).filter(x => x.idade < 75).length;
@@ -957,8 +974,15 @@ function mostrarResumo() {
   $('sCards').replaceChildren(card('Pedidos', S.peds.length, S.semProd ? S.semProd + ' sem produtos lidos' : 'todos com produtos'), card('Unidades', un, comProd ? (Math.round(10 * un / comProd) / 10).toString().replace('.', ',') + ' por pedido' : ''), card('Produtos diferentes', S.todos.length, S.todos.filter(a => a.alerta).length + ' com saída alta'), card('Sacolas usadas', sacTot, U.peds.filter(x => !x.b.sacolas.length).length + ' pedido(s) sem sacola'), card('Etiquetas Argox', U.c.argox, (Math.round(10 * U.c.argox / matCfg().cap) / 10).toString().replace('.', ',') + ' rolo(s)'));
   const top = S.todos.slice().sort((a, b) => b.un - a.un || b.peds.size - a.peds.size).slice(0, 15);
   const tb = $('sTop'); tb.replaceChildren();
-  top.forEach((a, i) => { const tr = el('tr'); const tdN = el('td', '', a.n || a.e); if (a.alerta) { tdN.append(document.createTextNode(' ')); tdN.append(el('span', 'tag e', 'saída alta')); } const rcx = recPorEan().get(a.e); if (rcx) { tdN.append(document.createTextNode(' ')); tdN.append(el('span', 'tag ' + rcx.cls, 'recusa: ' + rcx.q + ' un.')); } tr.append(el('td', 'mut', i + 1), tdN, tdUnidades(a), el('td', 'n', a.peds.size)); tb.append(tr); });
+  top.forEach((a, i) => { const tr = el('tr'); const tdN = el('td', '', a.n || a.e); if (a.alerta) { tdN.append(document.createTextNode(' ')); tdN.append(el('span', 'tag e', 'saída alta')); } { const nv = mapaNovos(Math.min(ate, Date.now())).get(a.e); if (nv) { tdN.append(document.createTextNode(' ')); tdN.append(tagNovo(nv)); } } const rcx = recPorEan().get(a.e); if (rcx) { tdN.append(document.createTextNode(' ')); tdN.append(el('span', 'tag ' + rcx.cls, 'recusa: ' + rcx.q + ' un.')); } tr.append(el('td', 'mut', i + 1), tdN, tdUnidades(a), el('td', 'n', a.peds.size)); tb.append(tr); });
   if (!top.length) { const tr = el('tr'); const td = el('td', 'mut', 'Nenhum produto nesta semana.'); td.colSpan = 4; tr.append(td); tb.append(tr); }
+  // entrou no portfólio: produtos que saíram na semana e estão marcados como novo / voltou
+  const MN = mapaNovos(Math.min(ate, Date.now())); const nvL = S.todos.filter(a => MN.has(a.e)).sort((a, b) => MN.get(a.e).t - MN.get(b.e).t || b.un - a.un);
+  const nb = $('sNovos'); nb.replaceChildren();
+  nvL.forEach(a => { const nv = MN.get(a.e); const tr = el('tr'); const tdN = el('td', '', a.n || a.e); const tdS = el('td'); tdS.append(tagNovo(nv), document.createTextNode(' ' + detalheNovo(nv).replace(/^(novo|voltou)[:]? ?/, ''))); tr.append(tdN, tdS, tdUnidades(a), el('td', 'n', a.peds.size)); nb.append(tr); });
+  if (!nvL.length) { const tr = el('tr'); const td = el('td', 'mut', 'Nenhum produto novo ou que voltou a sair nesta semana.'); td.colSpan = 4; tr.append(td); nb.append(tr); }
+  $('sNovoNota').textContent = novoNota(Math.min(ate, Date.now()));
+  const nvTxt = nvL.length ? '\n\nENTROU NO PORTFÓLIO\n' + nvL.map(a => (a.n || a.e) + ': ' + detalheNovo(MN.get(a.e)) + ' · ' + a.un + ' un.').join('\n') : '';
   const mt = $('sMat'); mt.replaceChildren();
   const linhasMat = MATS.map(m => [m.nome, U.c[m.k]]).concat([['Sem sacola (sacaria sozinha)', U.peds.filter(x => !x.b.sacolas.length).length]]);
   linhasMat.forEach(([n, q]) => { const tr = el('tr'); tr.append(el('td', '', n), el('td', 'n', q), el('td', 'n mut', comProd ? Math.round(100 * q / comProd) + '%' : '')); mt.append(tr); });
@@ -1015,12 +1039,66 @@ function mostrarResumo() {
   }
   RESUMO_TXT = 'RESUMO DA SEMANA (' + dataDe(de) + ' a ' + dataDe(ate) + ')\n' + S.peds.length + ' pedidos · ' + un + ' unidades · ' + S.todos.length + ' produtos diferentes'
     + '\n\nPRODUTOS QUE MAIS SAÍRAM\n' + top.map((a, i) => (i + 1) + '. ' + (a.n || a.e) + ': ' + a.un + ' un.' + (cxTxt(a.un, a.n) ? ' = ' + cxTxt(a.un, a.n) : '') + ' (' + a.peds.size + ' pedidos)').join('\n')
-    + '\n\nSACOLAS E ETIQUETAS\n' + linhasMat.map(([n, q]) => n + ': ' + q).join('\n')
+    + nvTxt + '\n\nSACOLAS E ETIQUETAS\n' + linhasMat.map(([n, q]) => n + ': ' + q).join('\n')
     + '\n\nPEDIDOS POR DIA\n' + linhasDia.map(([n, p, u]) => n + ': ' + p + ' pedidos, ' + u + ' un.').join('\n') + txtRec;
 }
 ['sSem', 'sSab'].forEach(k => $(k).addEventListener('input', mostrarResumo));
 $('sAtu').onclick = () => carregarHist(true).then(mostrarResumo);
 $('sCopiar').onclick = async () => { mostrarResumo(); try { await navigator.clipboard.writeText(RESUMO_TXT); toast('Resumo copiado. Cole no WhatsApp ou no e-mail.'); } catch (e) { toast('Não consegui copiar.'); } };
+
+
+// ---------- produto novo / voltou (a partir do histórico de pedidos com produtos)
+const K_NOVO = 'central_novo', K_NOVO_VISTO = 'central_novo_visto';
+const novoCfg = () => { let c = {}; try { c = JSON.parse(localStorage.getItem(K_NOVO) || '{}') || {}; } catch (e) {} return { dias: c.dias > 0 ? c.dias : 14, parado: c.parado > 0 ? c.parado : 30 }; };
+const NOVO_CACHE = { k: '', m: null };
+// Marcas valem "em ref" (data de referência): a janela é [ref - dias, ref].
+// novo   = primeira venda do produto dentro da janela E a história já tinha pelo menos "dias" dias antes dela (senão não dá para saber).
+// voltou = primeira venda depois de uma pausa de "parado" dias ou mais, dentro da janela.
+function mapaNovos(ref) {
+  const cfg = novoCfg(); const chave = histT + '|' + Math.floor(ref / 864e5) + '|' + cfg.dias + '|' + cfg.parado;
+  if (NOVO_CACHE.k === chave) return NOVO_CACHE.m;
+  const vendas = new Map(); let ini = Infinity;
+  HIST.forEach(r => {
+    const t = tSaida(r); if (!t || !(r.itens || []).length || t > ref) return;
+    if (t < ini) ini = t;
+    const vistos = new Set();
+    r.itens.forEach(i => { if (!i.e || vistos.has(i.e)) return; vistos.add(i.e); let a = vendas.get(i.e); if (!a) vendas.set(i.e, a = { ts: [], n: '' }); a.ts.push(t); if (i.n && i.n.length > a.n.length) a.n = i.n; });
+  });
+  const jan = cfg.dias * 864e5, gap = cfg.parado * 864e5; const m = new Map();
+  vendas.forEach((a, e) => {
+    a.ts.sort((x, y) => x - y); const prim = a.ts[0];
+    if (ref - prim <= jan && prim - ini >= jan) { m.set(e, { tipo: 'novo', t: prim, n: a.n }); return; }
+    for (let i = a.ts.length - 1; i >= 1; i--) if (a.ts[i] - a.ts[i - 1] >= gap) { if (ref - a.ts[i] <= jan) m.set(e, { tipo: 'voltou', t: a.ts[i], parado: Math.round((a.ts[i] - a.ts[i - 1]) / 864e5), n: a.n }); break; }
+  });
+  m.ini = isFinite(ini) ? ini : null;
+  NOVO_CACHE.k = chave; NOVO_CACHE.m = m; return m;
+}
+const tagNovo = nv => { const t = el('span', 'tag ' + (nv.tipo === 'novo' ? 'nv' : 'vt'), nv.tipo === 'novo' ? 'novo' : 'voltou'); t.title = nv.tipo === 'novo' ? 'Primeira venda em ' + dataDe(nv.t) : 'Voltou a sair em ' + dataDe(nv.t) + ', depois de ' + nv.parado + ' dias sem sair'; return t; };
+const detalheNovo = nv => nv.tipo === 'novo' ? 'novo: 1ª venda em ' + dataDe(nv.t) : 'voltou em ' + dataDe(nv.t) + ' (' + nv.parado + ' dias parado)';
+function novoNota(ref) {
+  const cfg = novoCfg(); const ini = mapaNovos(ref).ini; if (!ini) return 'Ainda não há histórico de produtos para marcar novos.';
+  const dN = new Date(ini + cfg.dias * 864e5), dV = new Date(ini + cfg.parado * 864e5);
+  const base = 'Novo = primeira venda nos últimos ' + cfg.dias + ' dias; voltou = voltou a sair nos últimos ' + cfg.dias + ' dias depois de ' + cfg.parado + ' dias parado.';
+  const curto = Date.now() < Math.max(dN.getTime(), dV.getTime());
+  return base + (curto ? ' Histórico de produtos desde ' + dataDe(ini) + ': "novo" passa a valer a partir de ' + dataDe(dN.getTime()) + ' e "voltou" a partir de ' + dataDe(dV.getTime()) + '.' : '');
+}
+{ const c0 = novoCfg(); $('nvDias').value = c0.dias; $('nvParado').value = c0.parado; }
+['nvDias', 'nvParado'].forEach(k => $(k).addEventListener('change', () => { const d = parseInt($('nvDias').value, 10), p = parseInt($('nvParado').value, 10); try { localStorage.setItem(K_NOVO, JSON.stringify({ dias: d > 0 ? d : 14, parado: p > 0 ? p : 30 })); } catch (e) {} $('nvMsg').textContent = 'Salvo.'; mostrarCompra(); atualizarNovosHoje(); }));
+
+// ---------- aviso de produtos novos na aba Hoje (some depois de visto, como o alerta de saída)
+let NOVOS_HOJE = null;
+const novoVistoLer = () => { try { return new Set(JSON.parse(localStorage.getItem(K_NOVO_VISTO) || '[]')); } catch (e) { return new Set(); } };
+const novoVisto = ks => { try { const v = novoVistoLer(); ks.forEach(k => v.add(k)); localStorage.setItem(K_NOVO_VISTO, JSON.stringify([...v].slice(-500))); } catch (e) {} };
+async function atualizarNovosHoje() {
+  try {
+    await carregarHist(); const M = mapaNovos(Date.now()); const visto = novoVistoLer(); const l = [];
+    M.forEach((v, e) => l.push({ k: e + '|' + v.tipo + '|' + v.t, e, v }));
+    l.sort((a, b) => b.v.t - a.v.t);
+    NOVOS_HOJE = { n: l.length, novos: l.filter(x => !visto.has(x.k)).length, ks: l.map(x => x.k), dias: novoCfg().dias, top: l.slice(0, 3).map(x => (x.v.n || x.e).slice(0, 46) + ' (' + x.v.tipo + ')') };
+  } catch (e) {}
+}
+setTimeout(atualizarNovosHoje, 3500);
+setInterval(atualizarNovosHoje, 10 * 60000);
 
 // ---------- alerta de saída na aba Hoje (últimos 7 dias; recalcula a cada 10 minutos)
 let ALERTA_HOJE = null;
