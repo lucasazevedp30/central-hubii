@@ -1,8 +1,8 @@
 {
-  "versao": "2.22.0",
-  "arquivo": "versoes/hubii-central-2.22.0.zip",
-  "sha256": "3e051a2583dc5eb884b6631ec35146a8fae50cb11112355359f7ac3c8ee2f711",
-  "tamanho": 996440,
-  "data": "2026-11-19T18:27:13Z",
-  "novidades": "- Produtos novos e que voltaram: a Central marca \"novo\" (primeira venda do produto) e \"voltou\" (produto que ficou 30 dias sem sair e saiu de novo) por 14 dias. Tempos editáveis em Produtos > \"Produto novo / voltou\".\n- Marcas nas tabelas de Produtos e do Resumo da semana, bloco \"Entrou no portfólio\" no Resumo, filtro \"Só novos e que voltaram\" e aviso na aba Hoje (some depois de visto).\n- Como a Central só anota produtos desde 14/11, \"novo\" começa a valer em 28/11 e \"voltou\" em 14/12; a tela explica."
+  "versao": "2.23.0",
+  "arquivo": "versoes/hubii-central-2.23.0.zip",
+  "sha256": "2fa69d9adf4309f128b014bff2361f26f735d6a50b70dabe30a1da6e901fdbc0",
+  "tamanho": 1010528,
+  "data": "2026-11-19T20:07:39Z",
+  "novidades": "- Nova aba Novidades: mostra o que a Central faz e o que mudou em cada versão (a lista se atualiza sozinha a cada versão nova).\n- Nova Planilha na nuvem (Ajuda e backup): a Central envia os números da loja (pedidos, produtos, horas, resumo por dia) para uma planilha do Google, para acompanhar em casa, no celular ou mostrar ao supervisor. Não vai nome, CPF, endereço nem valor de pedido. Passo a passo e botão de copiar o script dentro do painel.\n- Restaurar da planilha: em outro computador, cole o código de conexão e clique em Restaurar para trazer o histórico.\n- Aviso na aba Hoje quando o envio para a planilha der erro."
 }

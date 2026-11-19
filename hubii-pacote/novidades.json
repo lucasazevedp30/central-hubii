@@ -1,6 +1,16 @@
 {
  "versoes": [
   {
+   "v": "2.23.0",
+   "data": "19/11/2026",
+   "itens": [
+    "Nova aba Novidades: mostra o que a Central faz e o que mudou em cada versão (a lista se atualiza sozinha a cada versão nova).",
+    "Nova Planilha na nuvem (Ajuda e backup): a Central envia os números da loja (pedidos, produtos, horas, resumo por dia) para uma planilha do Google, para acompanhar em casa, no celular ou mostrar ao supervisor. Não vai nome, CPF, endereço nem valor de pedido. Passo a passo e botão de copiar o script dentro do painel.",
+    "Restaurar da planilha: em outro computador, cole o código de conexão e clique em Restaurar para trazer o histórico.",
+    "Aviso na aba Hoje quando o envio para a planilha der erro."
+   ]
+  },
+  {
    "v": "2.22.0",
    "data": "19/11/2026",
    "itens": [
