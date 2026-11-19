@@ -207,6 +207,132 @@ function InstalarOnline([bool]$confirmado) {
     if ($calc -ne $esperado) { return @{ ok = $false; msg = 'O pacote baixado não confere (pode ter chegado corrompido). Não instalei; nada mudou. Tente de novo mais tarde.' } }
     return (InstalarZip $bytes $true)
 }
+# ---------- planilha na nuvem (Google): envia o historico de pedidos para uma planilha e restaura dela
+# Fica desligada ate a pessoa configurar (Ajuda e backup > Planilha na nuvem). Envia so numero do pedido, produtos,
+# quantidades, horas e codigo BR (nada de nome, CPF, endereco ou valor). Config e estado ficam em %LOCALAPPDATA%\CentralHubii.
+$nuvemArq = Join-Path $histDir 'nuvem.json'
+$nuvemEstArq = Join-Path $histDir 'nuvem-estado.json'
+$nuvemRx = '^https://script\.google\.com/(macros/s/[A-Za-z0-9_-]+|a/macros/[A-Za-z0-9.-]+/s/[A-Za-z0-9_-]+)/exec$'
+$nuvem = @{ suja = $true; ultimaTentativa = (Get-Date); espera = 30; ok = $null; erro = ''; faltam = 0; ligada = $false }
+function NuvemLerArq { try { if (Test-Path $nuvemArq) { return ([System.IO.File]::ReadAllText($nuvemArq, $utf8) | ConvertFrom-Json) } } catch { }; return $null }
+function NuvemGravarCfg($c) { [System.IO.File]::WriteAllText($nuvemArq, ($c | ConvertTo-Json -Compress), $utf8) }
+function NuvemChave {
+    # a chave e criada uma vez; o script do Google leva a mesma (so quem tem a chave grava ou le)
+    $c = NuvemLerArq
+    if ($c -and ([string]$c.chave) -match '^[a-f0-9]{32}$') { return $c }
+    $n = [pscustomobject]@{ url = ''; chave = [guid]::NewGuid().ToString('N'); loja = 'PF19 Américas' }
+    NuvemGravarCfg $n; return $n
+}
+function NuvemCfg { $c = NuvemLerArq; if ($c -and ([string]$c.url) -match $nuvemRx -and ([string]$c.chave) -match '^[a-f0-9]{32}$') { return $c }; return $null }
+function NuvemEstadoLer { try { if (Test-Path $nuvemEstArq) { return ([System.IO.File]::ReadAllText($nuvemEstArq, $utf8) | ConvertFrom-Json) } } catch { }; return [pscustomobject]@{ ultimoU = 0 } }
+function NuvemEstadoGravar([int64]$u) { try { [System.IO.File]::WriteAllText($nuvemEstArq, (@{ ultimoU = $u } | ConvertTo-Json -Compress), $utf8) } catch { } }
+function NuvemHttp($metodo, $url, [string]$corpo) {
+    try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 } catch { }
+    $p = @{ Uri = $url; UseBasicParsing = $true; TimeoutSec = 60; Method = $metodo; Headers = @{ 'User-Agent' = 'central-hubii' } }
+    if ($metodo -eq 'Post') { $p.Body = [System.Text.Encoding]::UTF8.GetBytes($corpo); $p.ContentType = 'application/json; charset=utf-8' }
+    $r = Invoke-WebRequest @p
+    $txt = [System.Text.Encoding]::UTF8.GetString($r.RawContentStream.ToArray())
+    try { return ($txt.TrimStart([char]0xFEFF) | ConvertFrom-Json) }
+    catch { throw 'O Google não devolveu dados do script. Confira, na implantação do Apps Script, se "Quem pode acessar" está como "Qualquer pessoa".' }
+}
+function NuvemMsgErro($e) {
+    $m = [string]$e
+    if ($m -eq 'chave') { return 'A chave não bate. Copie o código do script de novo (o botão "Copiar código do script" já leva a chave certa), cole na planilha, salve e implante uma nova versão.' }
+    return 'Não consegui falar com a planilha: ' + $m
+}
+function NuvemEnviar {
+    $cfg = NuvemCfg
+    if (-not $cfg) { return @{ ok = $false; msg = 'A planilha na nuvem ainda não foi configurada.' } }
+    try {
+        $ultU = [int64](NuvemEstadoLer).ultimoU
+        $lista = New-Object System.Collections.ArrayList
+        if (Test-Path $histArq) {
+            foreach ($l in [System.IO.File]::ReadAllLines($histArq, $utf8)) {
+                if (-not $l.StartsWith('{') -or -not $l.EndsWith('}')) { continue }
+                if ($l -match '"u":(\d+)') { $u = [int64]$Matches[1] } else { continue }
+                if ($u -gt $ultU) { [void]$lista.Add([pscustomobject]@{ u = $u; l = $l }) }
+            }
+        }
+        $ord = @($lista | Sort-Object u)
+        $enviados = 0; $i = 0; $lotes = 0
+        while ($i -lt $ord.Count -and $lotes -lt 5) {
+            $j = [Math]::Min($i + 99, $ord.Count - 1)
+            while ($j + 1 -lt $ord.Count -and $ord[$j + 1].u -eq $ord[$j].u) { $j++ }   # nao corta no meio de registros com o mesmo horario
+            $cab = (@{ acao = 'historico'; chave = [string]$cfg.chave; loja = [string]$cfg.loja; pc = [string]$env:COMPUTERNAME } | ConvertTo-Json -Compress)
+            $corpo = $cab.Substring(0, $cab.Length - 1) + ',"registros":[' + ((@($ord[$i..$j]) | ForEach-Object { $_.l }) -join ',') + ']}'
+            $r = NuvemHttp 'Post' ([string]$cfg.url) $corpo
+            if (-not $r.ok) { throw ([string]$r.erro) }
+            NuvemEstadoGravar ([int64]$ord[$j].u)
+            $enviados += ($j - $i + 1); $i = $j + 1; $lotes++
+        }
+        $nuvem.ok = Get-Date; $nuvem.erro = ''; $nuvem.faltam = ($ord.Count - $i)
+        return @{ ok = $true; enviados = $enviados; faltam = ($ord.Count - $i); msg = $(if ($enviados) { "Enviado: $enviados registro(s)" + $(if ($ord.Count - $i) { '; faltam ' + ($ord.Count - $i) } else { '.' }) } else { 'Tudo já estava na planilha.' }) }
+    } catch {
+        $m = NuvemMsgErro $_.Exception.Message; $nuvem.erro = $m
+        return @{ ok = $false; msg = $m }
+    }
+}
+function NuvemTique {
+    # chamado a cada volta do servidor: envia o que for novo, no maximo a cada 5 minutos (20 s enquanto ainda faltar)
+    if (-not $nuvem.suja -or -not $nuvem.ligada) { return }
+    if (((Get-Date) - $nuvem.ultimaTentativa).TotalSeconds -lt $nuvem.espera) { return }
+    $nuvem.ultimaTentativa = Get-Date
+    $r = NuvemEnviar
+    if ($r.ok) { if ($r.faltam -gt 0) { $nuvem.espera = 20 } else { $nuvem.suja = $false; $nuvem.espera = 300 } } else { $nuvem.espera = 600 }
+}
+function NuvemTestar {
+    $cfg = NuvemCfg
+    if (-not $cfg) { return @{ ok = $false; msg = 'Cole o endereço do script do Google (termina em /exec).' } }
+    try {
+        $r = NuvemHttp 'Get' (([string]$cfg.url) + '?chave=' + $cfg.chave + '&acao=testar') $null
+        if (-not $r.ok) { throw ([string]$r.erro) }
+        return @{ ok = $true; msg = 'Conectado à planilha "' + [string]$r.planilha + '".' }
+    } catch { return @{ ok = $false; msg = (NuvemMsgErro $_.Exception.Message) } }
+}
+function NuvemSalvar([string]$entrada, [string]$loja) {
+    # aceita o endereco do script ou o "codigo de conexao" (endereco#chave) copiado de outro computador
+    $entrada = $entrada.Trim(); $chaveNova = ''
+    if ($entrada.Contains('#')) { $pt = $entrada.Split('#'); $entrada = $pt[0].Trim(); $chaveNova = $pt[1].Trim().ToLower() }
+    if ($entrada -notmatch $nuvemRx) { return @{ ok = $false; msg = 'Esse endereço não parece ser de um script do Google. Ele começa com https://script.google.com/ e termina com /exec.' } }
+    if ($chaveNova -and $chaveNova -notmatch '^[a-f0-9]{32}$') { return @{ ok = $false; msg = 'A chave depois do # não parece certa (são 32 letras e números).' } }
+    $c = NuvemChave; $c.url = $entrada
+    if ($chaveNova) { $c.chave = $chaveNova }
+    if ($loja.Trim()) { $c.loja = $loja.Trim().Substring(0, [Math]::Min(60, $loja.Trim().Length)) }
+    NuvemGravarCfg $c; $nuvem.ligada = $true; $nuvem.suja = $true; $nuvem.espera = 0; $nuvem.erro = ''
+    return (NuvemTestar)
+}
+function NuvemDesligar { $c = NuvemChave; $c.url = ''; NuvemGravarCfg $c; $nuvem.ligada = $false; $nuvem.erro = ''; return @{ ok = $true; msg = 'Planilha na nuvem desligada. Nada mais será enviado (o que já está na planilha continua lá).' } }
+function NuvemRestaurar {
+    $cfg = NuvemCfg
+    if (-not $cfg) { return @{ ok = $false; msg = 'A planilha na nuvem ainda não foi configurada.' } }
+    try {
+        $desde = 2; $pag = 0; $linhas = New-Object System.Collections.ArrayList; $maxU = [int64]0
+        while ($desde -and $pag -lt 400) {
+            $q = ([string]$cfg.url) + '?chave=' + $cfg.chave + '&acao=historico&desde=' + $desde + '&limite=200&loja=' + [uri]::EscapeDataString([string]$cfg.loja)
+            $r = NuvemHttp 'Get' $q $null
+            if (-not $r.ok) { throw ([string]$r.erro) }
+            foreach ($x in @($r.registros)) {
+                $t = [string]$x
+                if (-not $t.StartsWith('{') -or -not $t.EndsWith('}') -or $t.Length -ge 20000 -or $t -match "[\r\n]" -or $t -notmatch '"id":"\d{5,9}"') { continue }
+                $t = '{"fonte":"nuvem",' + $t.Substring(1)
+                [void]$linhas.Add($t)
+                if ($t -match '"u":(\d+)') { $maxU = [Math]::Max($maxU, [int64]$Matches[1]) }
+            }
+            $desde = $r.proximo; $pag++
+        }
+        if ($linhas.Count) { [System.IO.File]::AppendAllText($histArq, (($linhas -join "`n") + "`n"), $utf8) }
+        # o que veio da planilha nao precisa voltar para ela
+        if ($maxU -gt [int64](NuvemEstadoLer).ultimoU) { NuvemEstadoGravar $maxU }
+        return @{ ok = $true; n = $linhas.Count; msg = "Restaurado da planilha: $($linhas.Count) pedido(s). Abra Histórico de pedidos ou Compra contínua para ver." }
+    } catch { return @{ ok = $false; msg = (NuvemMsgErro $_.Exception.Message) } }
+}
+function NuvemResumo {
+    $ok = ''; if ($nuvem.ok) { $ok = ([datetime]$nuvem.ok).ToString('HH:mm') }
+    $c = NuvemLerArq
+    return @{ ligada = [bool]$nuvem.ligada; ok = $ok; erro = [string]$nuvem.erro; faltam = [int]$nuvem.faltam; loja = $(if ($c) { [string]$c.loja } else { 'PF19 Américas' }); url = $(if ($c) { [string]$c.url } else { '' }); codigo = $(if ($c -and [string]$c.url) { [string]$c.url + '#' + [string]$c.chave } else { '' }) }
+}
+$nuvem.ligada = [bool](NuvemCfg)
+
 function NovaOrdem($acao, $id, $seg) { if (-not $id) { $id = [guid]::NewGuid().ToString('N') }; [void]$ordens.Add(@{ id = $id; acao = $acao; t = Get-Date; seg = $seg; entregues = @{} }); return $id }
 function JuntarArquivos($filtro, $prefixo) {
     # monta {"<fonte>": <conteudo do arquivo>, ...} sem reler o JSON (os arquivos ja sao JSON valido)
@@ -319,6 +445,11 @@ function Acao($a, [bool]$confirmado, $dados) {
             return @{ ok = $true; msg = "Abrindo o pedido $id no Hubii (Chrome)..." }
         }
         'voltarversao' { return (VoltarVersao $confirmado) }
+        'nuvemsalvar'    { return (NuvemSalvar ([string]$dados.url) ([string]$dados.loja)) }
+        'nuvemtestar'    { return (NuvemTestar) }
+        'nuvemenviar'    { $nuvem.suja = $true; return (NuvemEnviar) }
+        'nuvemrestaurar' { return (NuvemRestaurar) }
+        'nuvemdesligar'  { return (NuvemDesligar) }
         'instalaronline' { return (InstalarOnline $confirmado) }
         'backup'      { $id = NovaOrdem 'backup' $null 90; return @{ ok = $true; id = $id; msg = 'Pedindo os dados a cada Chrome com a extensao...' } }
         'parar'       { [void]$ordens.Add(@{ id = [guid]::NewGuid().ToString('N'); acao = 'parar'; t = Get-Date; entregues = @{} }); return @{ ok = $true; msg = 'Pedido de parada enviado. A rotina termina o pedido atual e para.' } }
@@ -329,6 +460,7 @@ function Acao($a, [bool]$confirmado, $dados) {
 # ---------- atender os pedidos da pagina e da extensao
 $ligado = $true
 while ($ligado -and $srv.IsListening) {
+    try { NuvemTique } catch { }
     try { $ctx = $srv.GetContext() } catch { break }
     $req = $ctx.Request
     $rota = $req.Url.AbsolutePath
@@ -370,6 +502,17 @@ while ($ligado -and $srv.IsListening) {
                 Responder $ctx 200 $m 'application/manifest+json'
             }
             elseif ($rota -eq '/api/online') { Responder $ctx 200 (Json (BuscarOnline ($req.QueryString['forcar'] -eq '1'))) 'application/json' }
+            elseif ($rota -eq '/api/nuvem') { Responder $ctx 200 (Json (NuvemResumo)) 'application/json' }
+            elseif ($rota -eq '/api/nuvem-script') {
+                $pg = Join-Path (Join-Path $dir 'nuvem') 'central-planilha.gs'
+                if (-not (Test-Path $pg)) { Responder $ctx 404 'script nao encontrado' 'text/plain'; continue }
+                $ch = NuvemChave
+                Responder $ctx 200 (([System.IO.File]::ReadAllText($pg, $utf8)).Replace('__CHAVE__', [string]$ch.chave)) 'text/plain'
+            }
+            elseif ($rota -eq '/api/novidades') {
+                $pn = Join-Path $dir 'novidades.json'
+                if (Test-Path $pn) { Responder $ctx 200 ([System.IO.File]::ReadAllText($pn, $utf8)) 'application/json' } else { Responder $ctx 200 '{"versoes":[],"anteriores":[]}' 'application/json' }
+            }
             elseif ($rota -eq '/api/ping') { Responder $ctx 200 '{"app":"central-hubii"}' 'application/json' }
             elseif ($rota -eq '/api/estado') {
                 LerComputador
@@ -380,7 +523,7 @@ while ($ligado -and $srv.IsListening) {
                     if ($idade -gt 3600) { $fontes.Remove($k); continue }
                     $lista += ('{"idade":' + $idade + ',"d":' + $f.json + '}')
                 }
-                $o = [ordered]@{ app = 'central-hubii'; hora = $agora.ToString('HH:mm:ss'); data = $agora.ToString('dd/MM/yyyy'); pc = $env:COMPUTERNAME; versaoPasta = (VersaoPasta); impressoras = $cache.imp; processos = $cache.proc }
+                $o = [ordered]@{ app = 'central-hubii'; hora = $agora.ToString('HH:mm:ss'); data = $agora.ToString('dd/MM/yyyy'); pc = $env:COMPUTERNAME; versaoPasta = (VersaoPasta); impressoras = $cache.imp; processos = $cache.proc; nuvem = (NuvemResumo) }
                 $j = Json $o
                 $j = $j.Substring(0, $j.Length - 1) + ',"fontes":[' + ($lista -join ',') + ']}'
                 Responder $ctx 200 $j 'application/json'
@@ -442,7 +585,7 @@ while ($ligado -and $srv.IsListening) {
             $histOk = $false; $pendOk = $false; $enxugar = $false
             if ($dados.hist -and @($dados.hist).Count) {
                 $boas = @(@($dados.hist) | Where-Object { $_ -is [string] -and $_.StartsWith('{') -and $_.EndsWith('}') -and $_.Length -lt 20000 -and $_ -notmatch "[\r\n]" -and $_ -match '"id":"\d{5,9}"' })
-                try { if ($boas.Count) { [System.IO.File]::AppendAllText($histArq, (($boas -join "`n") + "`n"), $utf8) }; $histOk = $true } catch { $histOk = $false }
+                try { if ($boas.Count) { [System.IO.File]::AppendAllText($histArq, (($boas -join "`n") + "`n"), $utf8); $nuvem.suja = $true }; $histOk = $true } catch { $histOk = $false }
                 $dados.hist = @(); $enxugar = $true
             }
             if ($dados.pendDados) {

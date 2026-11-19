@@ -97,5 +97,18 @@ extensão (apaga os dados); recarregar sempre da mesma pasta.
 - Caixa fechada dos sachês (2.20.1, editável na aba Produtos, `painel.html` `caixaDe`): Pedigree High Protein 20,
   Pedigree 18, Whiskas 20, Friskies 15, Royal Canin 12, Premier 20, Dog Chow 15. Sachê = "sachê" no nome ou ração
   úmida <= 100 g que não seja lata (o Friskies vem sem "sachê" no nome). A compra desses sachês é por caixa.
+- Planilha na nuvem (2.23.0, Ajuda e backup > Planilha na nuvem): o painel envia o histórico de pedidos (id, produtos,
+  quantidades, horas, código BR; NUNCA nome/CPF/endereço/valor) para uma planilha Google por um Apps Script
+  (`hubii-pacote/nuvem/central-planilha.gs`, servido por `/api/nuvem-script` com a chave embutida). Config em
+  `%LOCALAPPDATA%\CentralHubii\nuvem.json` (url, chave, loja) e `nuvem-estado.json` (ultimoU = maior `u` já enviado).
+  Envio automático no laço do servidor (`NuvemTique`, no máx. a cada 5 min, 20 s se faltar); "Restaurar da planilha"
+  traz o histórico para outro computador (código de conexão = `url#chave`, a chave é uma só por planilha). A planilha
+  tem as abas Pedidos (1 linha por pedido, coluna JSON é a fonte) e Resumo do dia (pedidos, unidades, etiquetas,
+  conferidos, sacolas). ATENÇÃO: `pesoKg`/`sacolaDe` existem em `painel.html` e no `.gs` (copiados); mudou a regra
+  das sacolas, mude nos dois. Testado só em simulação (servidor em pwsh + Google de mentira + script em Node); o
+  primeiro teste real é na loja. O conector Google Sheets do claude.ai (conta do usuário) permite ler essa planilha
+  nos chats. Ideias futuras: aba de produtos por semana, modo acompanhamento (só leitura) para supervisor.
+- Aba Novidades (2.23.0): lê `hubii-pacote/novidades.json`; `publicar.sh` acrescenta cada versão sozinho a partir
+  do arquivo de notas (linhas que começam com "- ").
 - Reembolso da Shopee: esperando retorno do responsável. Vídeo: esperando áudios do ElevenLabs.
 - Por último (quando o resto estiver 100%): outras lojas — configuração por loja, instalador, fixar ID da extensão.

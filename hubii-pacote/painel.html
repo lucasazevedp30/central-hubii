@@ -98,6 +98,7 @@ footer .esp{flex:1}
 @media (max-width:860px){.duas{grid-template-columns:1fr}}
 .metricas.cinco{grid-template-columns:repeat(5,minmax(0,1fr))}
 @media (max-width:860px){.metricas.cinco{grid-template-columns:repeat(2,minmax(0,1fr))}}
+#nuCard input{font-family:inherit;font-size:13.5px;padding:8px 10px;border:1px solid var(--borda);border-radius:9px;background:#fff;color:var(--txt);box-sizing:border-box}
 .tag.nv{background:#E1EEFF;color:#0B4FA8}.tag.vt{background:#DDF3F0;color:#0B6B5F}
 .subabas{display:flex;gap:8px;margin:0 0 12px}
 .sub{background:var(--card);border:1px solid var(--borda);border-radius:999px;padding:7px 16px;font-size:13.5px;color:var(--suave);cursor:pointer}
@@ -122,7 +123,7 @@ footer .esp{flex:1}
   <div class="relogio"><b id="hora">--:--</b><div class="t2" id="data"></div></div>
 </header>
 <main id="tela">
-  <div class="abas"><button class="aba on" data-v="vHoje">Hoje</button><button class="aba" data-v="vPend">Pendências</button><button class="aba" data-v="vHist">Histórico de pedidos</button><button class="aba" data-v="vCompra">Compra contínua</button><button class="aba" data-v="vAjuda">Ajuda e backup</button></div>
+  <div class="abas"><button class="aba on" data-v="vHoje">Hoje</button><button class="aba" data-v="vPend">Pendências</button><button class="aba" data-v="vHist">Histórico de pedidos</button><button class="aba" data-v="vCompra">Compra contínua</button><button class="aba" data-v="vAjuda">Ajuda e backup</button><button class="aba" data-v="vNovid">Novidades</button></div>
   <div class="chips" id="chips"></div>
   <div class="alertas" id="alertas"></div>
 <section class="vista on" id="vHoje">
@@ -159,6 +160,22 @@ footer .esp{flex:1}
   </div>
   <div class="resumo" id="hRes"></div>
   <div class="tabela"><div class="rol"><table><thead><tr><th>Pedido</th><th>Dia</th><th>Descritivo</th><th>Etiqueta</th><th>Conferido</th><th>Código BR</th><th>Produtos</th></tr></thead><tbody id="hCorpo"></tbody></table></div></div>
+</section>
+
+<section class="vista" id="vNovid">
+  <h2 style="margin-top:4px">O que a Central Hubii faz</h2>
+  <div class="rot" style="margin-bottom:14px"><div class="desc">
+    <p>Automatiza o dia a dia da loja no <b>Hubii</b>, no <b>OneHub</b> e no <b>OnePet</b>, com a conferência da pessoa antes de qualquer ação que não se desfaz:</p>
+    <p><b>Impressão:</b> descritivos e etiquetas na mesma ordem, sem repetir nenhum pedido, com lista de conferência antes de faturar. Continua de onde parou se o Hubii cair no meio.<br>
+    <b>Conferência de despacho:</b> bipe da etiqueta de cada pacote, com aviso de repetido e de fora da lista.<br>
+    <b>Pendências:</b> coleta no OnePet, verificação no Hubii e no OneHub, lista de cancelar e baixa assistida.<br>
+    <b>Histórico por pedido:</b> produtos, horas do descritivo, da etiqueta e da conferência, código BR.<br>
+    <b>Compra contínua:</b> o que mais saiu na semana, sachês em caixas fechadas, recusas do Hubii, produtos novos e que voltaram, sacolas e etiquetas usadas com estoque e previsão, e resumo para copiar.<br>
+    <b>Segurança:</b> backup e restauração dos dados, atualização pela internet com conferência do pacote e volta para a versão anterior.</p>
+  </div></div>
+  <h2>O que mudou em cada versão</h2>
+  <div id="novLista"></div>
+  <details id="novAnt" style="margin-top:12px"><summary style="cursor:pointer;color:var(--suave)">Versões anteriores (do início até a 2.15.3)</summary><div id="novAntLista" style="margin-top:8px"></div></details>
 </section>
 
 <section class="vista" id="vCompra">
@@ -301,6 +318,30 @@ footer .esp{flex:1}
       <button id="atVoltar">Voltar à versão anterior</button>
       <div class="mut" id="atMsg" style="font-size:12.5px;margin-top:6px"></div>
     </div>
+    <div class="rot" id="nuCard">
+      <div class="nome">Planilha na nuvem (Google)</div>
+      <div class="desc">
+        <p>Envia os números da loja (pedidos, produtos, horas e um resumo por dia) para uma planilha do Google. Dá para ver em casa, no celular ou mostrar ao supervisor só com o link da planilha. <b>Não vai</b> nome de cliente, CPF, endereço nem valor de pedido.</p>
+        <p id="nuStatus" class="mut"></p>
+      </div>
+      <details id="nuPassos"><summary style="cursor:pointer;font-size:13px"><b>Como ligar (uma vez só)</b></summary>
+        <ol class="desc" style="margin:8px 0;padding-left:18px">
+          <li>No Chrome, abra <b>sheets.new</b> (na conta Google da empresa). Abre uma planilha em branco.</li>
+          <li>Na planilha, no menu <b>Extensões → Apps Script</b>.</li>
+          <li>Apague o que estiver na tela, clique abaixo em <b>Copiar código do script</b>, cole lá e salve (Ctrl+S).</li>
+          <li>Clique em <b>Implantar → Nova implantação</b> e escolha o tipo <b>App da Web</b>. Em "Executar como" deixe <b>Eu</b>; em "Quem pode acessar" escolha <b>Qualquer pessoa</b>. Clique em <b>Implantar</b> e autorize (Avançado → Acessar projeto → Permitir).</li>
+          <li>Copie o <b>URL do app da Web</b>, cole no campo abaixo e clique em <b>Salvar e testar</b>.</li>
+          <li>Clique em <b>Enviar agora</b>. Depois disso a Central envia sozinha.</li>
+        </ol>
+        <p class="desc" style="margin:0 0 6px"><b>Em outro computador</b> (casa, supervisor): instale a Central, abra o painel, cole aqui o <b>código de conexão</b> (botão abaixo, no primeiro computador) e clique em <b>Restaurar da planilha</b>. Quem só quer olhar os números não precisa de nada disso: basta o link da planilha.</p>
+        <button id="nuCopiarScript">Copiar código do script</button>
+      </details>
+      <label class="mut" style="font-size:12.5px;margin-top:8px">Nome da loja <input id="nuLoja" style="width:100%;margin-top:3px"></label>
+      <label class="mut" style="font-size:12.5px">Endereço do script (ou código de conexão) <input id="nuUrl" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%;margin-top:3px"></label>
+      <div><button class="pri" id="nuSalvar">Salvar e testar</button> <button id="nuEnviar">Enviar agora</button> <button id="nuRestaurar">Restaurar da planilha</button></div>
+      <div><button id="nuCodigo">Copiar código de conexão</button> <button id="nuDesligar">Desligar</button></div>
+      <div class="mut" id="nuMsg" style="font-size:12.5px;margin-top:6px"></div>
+    </div>
     <div class="rot">
       <div class="nome">Backup dos seus dados</div>
       <div class="desc">
@@ -417,6 +458,7 @@ function desenhar(s) {
   if (imp.padrao) ch.append(chip('Padrão: ' + imp.padrao.replace(' series PPLA', ''), /MP-4200/.test(imp.padrao) || pr.ajudante ? '' : 'av'));
   if (pr.ajudante) ch.append(chip('Ajudante de etiquetas ligado', 'ok'));
   ch.append(chip(pr.chromeCentral ? 'Chrome da Central aberto' : 'Chrome da Central fechado', pr.chromeCentral ? 'ok' : ''));
+  if (s.nuvem && s.nuvem.ligada) ch.append(chip(s.nuvem.erro ? 'Planilha na nuvem: com erro' : 'Planilha na nuvem' + (s.nuvem.ok ? ' · enviado às ' + s.nuvem.ok : ''), s.nuvem.erro ? 'av' : 'ok'));
 
   // alertas
   const al = $('alertas'); al.replaceChildren();
@@ -442,6 +484,7 @@ function desenhar(s) {
     b.onclick = () => { alertaVisto(ALERTA_HOJE.eans); ALERTA_HOJE.novos = 0; a.remove(); $('cPer').value = '7'; $('cDatas').style.display = 'none'; $('cAcao').value = 'alerta'; document.querySelector('.sub[data-s="cProd"]').click(); document.querySelector('.aba[data-v="vCompra"]').click(); };
     a.append(b); al.append(a);
   }
+  if (s.nuvem && s.nuvem.ligada && s.nuvem.erro) avisa('Planilha na nuvem: ' + s.nuvem.erro, 'av');
   if (imp.mp === 'offline') avisa('O Windows diz que a MP-4200 TH está offline. Se ela estiver imprimindo normalmente, pode ignorar; senão, confira o cabo e se ela está ligada.', 'av');
   if (imp.padrao && !/MP-4200/.test(imp.padrao) && !pr.ajudante) avisa('A impressora padrão está em "' + imp.padrao + '" e o ajudante de etiquetas está desligado. Se já terminou as etiquetas, use "Voltar a MP-4200 como padrão".', 'av');
 
@@ -495,6 +538,8 @@ document.querySelectorAll('.aba').forEach(b => b.onclick = () => {
   document.querySelectorAll('.aba').forEach(x => x.classList.toggle('on', x === b));
   document.querySelectorAll('.vista').forEach(x => x.classList.toggle('on', x.id === b.dataset.v));
   vista = b.dataset.v;
+  if (vista === 'vNovid') carregarNovidades();
+  if (vista === 'vAjuda') carregarNuvem();
   if (vista === 'vHist' || vista === 'vCompra') carregarHist().then(() => vista === 'vHist' ? mostrarHist() : mostrarCompra());
   if (vista === 'vPend') carregarPend().then(mostrarPend);
 });
@@ -1099,6 +1144,62 @@ async function atualizarNovosHoje() {
 }
 setTimeout(atualizarNovosHoje, 3500);
 setInterval(atualizarNovosHoje, 10 * 60000);
+
+// ---------- planilha na nuvem (Google)
+const nuAcao = async (a, extra) => (await fetch('/api/acao', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Central': '1' }, body: JSON.stringify(Object.assign({ acao: a }, extra || {})) })).json();
+const nuMsg = (t, cls) => { const m = $('nuMsg'); m.textContent = t; m.className = 'mut ' + (cls || ''); };
+let NU = null;
+async function carregarNuvem() {
+  try { NU = await (await fetch('/api/nuvem', { cache: 'no-store' })).json(); } catch (e) { return; }
+  const st = $('nuStatus');
+  if (!NU.ligada) st.textContent = 'Desligada. Siga "Como ligar" abaixo para começar.';
+  else if (NU.erro) { st.textContent = 'Ligada, mas com erro: ' + NU.erro; st.className = 'avc'; }
+  else { st.className = 'okc'; st.textContent = 'Ligada' + (NU.ok ? ' · último envio às ' + NU.ok : ' · ainda não enviou nada') + (NU.faltam ? ' · faltam ' + NU.faltam + ' registro(s)' : ''); }
+  if (document.activeElement !== $('nuLoja')) $('nuLoja').value = NU.loja || 'PF19 Américas';
+  if (document.activeElement !== $('nuUrl') && NU.url && !$('nuUrl').value) $('nuUrl').value = NU.url;
+  $('nuCodigo').disabled = !NU.codigo; $('nuEnviar').disabled = !NU.ligada; $('nuDesligar').disabled = !NU.ligada;
+}
+const copiar = async t => { try { await navigator.clipboard.writeText(t); return true; } catch (e) { return false; } };
+$('nuCopiarScript').onclick = async () => {
+  try { const t = await (await fetch('/api/nuvem-script', { cache: 'no-store' })).text(); nuMsg((await copiar(t)) ? 'Código do script copiado. Cole na planilha (Extensões → Apps Script).' : 'Não consegui copiar.', ''); } catch (e) { nuMsg('Não consegui ler o código do script.', 'avc'); }
+};
+$('nuSalvar').onclick = async () => {
+  nuMsg('Testando a conexão...'); const r = await nuAcao('nuvemsalvar', { url: $('nuUrl').value, loja: $('nuLoja').value });
+  nuMsg(r.msg || (r.ok ? 'Feito.' : 'Não deu certo.'), r.ok ? 'okc' : 'avc'); if (r.ok) $('nuUrl').value = ''; await carregarNuvem();
+};
+$('nuEnviar').onclick = async () => {
+  const b = $('nuEnviar'); b.disabled = true;
+  try {
+    let total = 0, r = null;
+    for (let i = 0; i < 60; i++) { nuMsg('Enviando...' + (total ? ' ' + total + ' registro(s) enviados' : '')); r = await nuAcao('nuvemenviar'); if (!r.ok) break; total += r.enviados || 0; if (!r.faltam) break; }
+    nuMsg(r && r.ok ? (total ? 'Enviado: ' + total + ' registro(s). A planilha está em dia.' : 'A planilha já estava em dia.') : (r && r.msg) || 'Não deu certo.', r && r.ok ? 'okc' : 'avc');
+  } catch (e) { nuMsg('O painel não respondeu.', 'avc'); }
+  b.disabled = false; await carregarNuvem();
+};
+$('nuRestaurar').onclick = async () => {
+  if (!await perguntar('Trazer da planilha os pedidos que faltam neste computador? Nada é apagado nem trocado; pode repetir sem duplicar.')) return;
+  nuMsg('Restaurando da planilha... (pode levar um pouco)'); const r = await nuAcao('nuvemrestaurar');
+  nuMsg(r.msg || 'Não deu certo.', r.ok ? 'okc' : 'avc'); if (r.ok) { await carregarHist(true); } await carregarNuvem();
+};
+$('nuCodigo').onclick = async () => {
+  if (!NU || !NU.codigo) return;
+  nuMsg((await copiar(NU.codigo)) ? 'Código de conexão copiado. Cole no mesmo campo, no outro computador. Quem tem esse código consegue ler e gravar na planilha: não mande para qualquer pessoa. O supervisor só precisa do link da planilha.' : 'Não consegui copiar.', '');
+};
+$('nuDesligar').onclick = async () => {
+  if (!await perguntar('Desligar o envio para a planilha? O que já está na planilha continua lá.')) return;
+  const r = await nuAcao('nuvemdesligar'); nuMsg(r.msg || '', r.ok ? 'okc' : 'avc'); $('nuUrl').value = ''; await carregarNuvem();
+};
+
+// ---------- novidades (lista de versões, lida do arquivo novidades.json)
+async function carregarNovidades() {
+  let d = { versoes: [], anteriores: [] };
+  try { d = await (await fetch('/api/novidades', { cache: 'no-store' })).json(); } catch (e) {}
+  const bloco = v => { const c = el('div', 'rot'); c.style.marginBottom = '8px'; const t = el('div', 'nome', v.v + ' · ' + v.data); const l = el('ul', 'desc'); l.style.cssText = 'margin:6px 0 0;padding-left:18px'; (v.itens || []).forEach(x => l.append(el('li', '', x))); c.append(t, l); return c; };
+  $('novLista').replaceChildren(...(d.versoes || []).map(bloco));
+  $('novAntLista').replaceChildren(...(d.anteriores || []).map(bloco));
+  $('novAnt').style.display = (d.anteriores || []).length ? '' : 'none';
+  if (!(d.versoes || []).length) $('novLista').append(el('p', 'mut', 'Ainda não há novidades registradas.'));
+}
 
 // ---------- alerta de saída na aba Hoje (últimos 7 dias; recalcula a cada 10 minutos)
 let ALERTA_HOJE = null;
