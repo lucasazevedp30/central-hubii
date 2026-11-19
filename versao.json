@@ -1,8 +1,8 @@
 {
-  "versao": "2.21.0",
-  "arquivo": "versoes/hubii-central-2.21.0.zip",
-  "sha256": "70da40daf0db7a6bf997a2c4183edd3ad4187fd92aede8b836371219dbed78ac",
-  "tamanho": 994349,
-  "data": "2026-11-19T13:29:12Z",
-  "novidades": "- Resumo da semana: nova seção \"Recusas do Hubii\" com o resumo do que foi recusado (produtos, unidades, valor perdido, o que precisa comprar), o que mais foi recusado, o total por ação e o que saiu e foi recusado por ruptura.\n- Ao colar as recusas (aba Produtos) dá para informar o período do relatório do Hubii; o resumo avisa se for de outra semana.\n- Nos produtos que mais saíram aparece a etiqueta \"recusa: N un.\" quando o produto também foi recusado.\n- O botão \"Copiar resumo\" leva as recusas junto."
+  "versao": "2.22.0",
+  "arquivo": "versoes/hubii-central-2.22.0.zip",
+  "sha256": "3e051a2583dc5eb884b6631ec35146a8fae50cb11112355359f7ac3c8ee2f711",
+  "tamanho": 996440,
+  "data": "2026-11-19T18:27:13Z",
+  "novidades": "- Produtos novos e que voltaram: a Central marca \"novo\" (primeira venda do produto) e \"voltou\" (produto que ficou 30 dias sem sair e saiu de novo) por 14 dias. Tempos editáveis em Produtos > \"Produto novo / voltou\".\n- Marcas nas tabelas de Produtos e do Resumo da semana, bloco \"Entrou no portfólio\" no Resumo, filtro \"Só novos e que voltaram\" e aviso na aba Hoje (some depois de visto).\n- Como a Central só anota produtos desde 14/11, \"novo\" começa a valer em 28/11 e \"voltou\" em 14/12; a tela explica."
 }
