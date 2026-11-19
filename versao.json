@@ -1,8 +1,8 @@
 {
-  "versao": "2.20.2",
-  "arquivo": "versoes/hubii-central-2.20.2.zip",
-  "sha256": "027ad91dc50cccc197ee4e833dc86a85f68a5116d0636f2c39bdea01252b4f2f",
-  "tamanho": 992992,
-  "data": "2026-11-18T14:17:23Z",
-  "novidades": "- Etiquetas: a frase sobre pedidos da memória que não estão em Esperando Expedição não diz mais \"aguardando a NFe\" por palpite. Agora mostra o status real de cada pedido (ex.: Cancelado, Em trânsito, fora da aba Despacho) lido no servidor do Hubii."
+  "versao": "2.21.0",
+  "arquivo": "versoes/hubii-central-2.21.0.zip",
+  "sha256": "70da40daf0db7a6bf997a2c4183edd3ad4187fd92aede8b836371219dbed78ac",
+  "tamanho": 994349,
+  "data": "2026-11-19T13:29:12Z",
+  "novidades": "- Resumo da semana: nova seção \"Recusas do Hubii\" com o resumo do que foi recusado (produtos, unidades, valor perdido, o que precisa comprar), o que mais foi recusado, o total por ação e o que saiu e foi recusado por ruptura.\n- Ao colar as recusas (aba Produtos) dá para informar o período do relatório do Hubii; o resumo avisa se for de outra semana.\n- Nos produtos que mais saíram aparece a etiqueta \"recusa: N un.\" quando o produto também foi recusado.\n- O botão \"Copiar resumo\" leva as recusas junto."
 }
