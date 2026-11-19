@@ -83,6 +83,10 @@ extensão (apaga os dados); recarregar sempre da mesma pasta.
   Regras combinadas com o usuário em 17/11; ajustar aqui e no código se ele pedir.
 - Resumo da semana (2.20.0, sub-aba da Compra contínua): seg a sex (opção de sábado), produtos que mais saíram,
   sacolas/etiquetas, pedidos por dia, recusas coladas e botão "Copiar resumo" (texto para WhatsApp/e-mail).
+- Recusas no Resumo da semana (2.21.0): seção própria com cartões, o que mais foi recusado (por valor), por ação, e o que
+  saiu e foi recusado por ruptura. O relatório do Hubii não traz datas: o usuário informa o período ao colar (campos
+  de/até, padrão seg-sex da semana atual); sem período, assume a semana da colagem. Avisa se o período difere da
+  semana mostrada. Só um relatório fica guardado (`central_recusas`: t, txt, de, ate).
 - Caixa fechada dos sachês (2.20.1, editável na aba Produtos, `painel.html` `caixaDe`): Pedigree High Protein 20,
   Pedigree 18, Whiskas 20, Friskies 15, Royal Canin 12, Premier 20, Dog Chow 15. Sachê = "sachê" no nome ou ração
   úmida <= 100 g que não seja lata (o Friskies vem sem "sachê" no nome). A compra desses sachês é por caixa.

@@ -181,6 +181,7 @@ footer .esp{flex:1}
   <div class="rec">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><b>Recusas do Hubii</b><span class="mut" id="rInfo" style="font-size:12.5px">Cole aqui o relatório de recusas copiado do painel do Hubii.</span></div>
     <textarea id="rTxt" placeholder="Produto	EAN	Marca	Motivo	Qtd. recusada	Valor total	Participação na perda"></textarea>
+    <div class="lin" style="margin-bottom:6px"><label class="mut" style="font-size:12.5px">Período do relatório do Hubii: de <input type="date" id="rDe"></label><label class="mut" style="font-size:12.5px">até <input type="date" id="rAte"></label><span class="mut" style="font-size:12px">(o Resumo da semana usa isso para saber de que período são as recusas)</span></div>
     <div class="lin"><button class="pri" id="rCruzar">Cruzar recusas com as saídas</button><button id="rLimpar">Limpar recusas</button><span class="mut" id="rMsg" style="font-size:12.5px"></span></div>
     <div id="rResumo"></div>
   </div>
@@ -212,9 +213,9 @@ footer .esp{flex:1}
         <div class="tabela"><table><thead><tr><th>Material</th><th class="n">Quantidade</th><th class="n">% dos pedidos</th></tr></thead><tbody id="sMat"></tbody></table></div>
         <h2>Pedidos por dia</h2>
         <div class="tabela"><table><thead><tr><th>Dia</th><th class="n">Pedidos</th><th class="n">Unidades</th></tr></thead><tbody id="sDias"></tbody></table></div>
-        <div id="sRec"></div>
       </div>
     </div>
+    <div id="sRec"></div>
     <p class="mut" style="font-size:12.5px;margin-top:10px">Pedidos contados pelo dia do descritivo (como na aba Produtos). Sacolas pela regra dos Materiais de separação; etiquetas pelas impressas na semana. Pedidos sem produtos lidos ficam fora das somas de produtos e sacolas.</p>
   </div>
   <div id="cMat" style="display:none">
@@ -633,9 +634,11 @@ function mostrarRecusas(R) {
 $('rCruzar').onclick = () => {
   const txt = $('rTxt').value; const l = lerRecusas(txt);
   if (!l.length) { $('rMsg').textContent = 'Não reconheci nenhuma linha com EAN. Copie a tabela de recusas inteira do painel do Hubii e cole de novo.'; return; }
-  try { localStorage.setItem(K_REC, JSON.stringify({ t: Date.now(), txt })); } catch (e) {}
+  const dd = v => v ? new Date(v + 'T00:00:00').getTime() : null; const ra = $('rAte').value ? new Date($('rAte').value + 'T23:59:59').getTime() : null;
+  try { localStorage.setItem(K_REC, JSON.stringify({ t: Date.now(), txt, de: dd($('rDe').value), ate: ra })); } catch (e) {}
   RECCACHE = null; $('rTxt').value = ''; $('rMsg').textContent = l.length + ' produto(s) recusado(s) lido(s).'; mostrarCompra();
 };
+{ const h = new Date(); h.setHours(0, 0, 0, 0); const seg = new Date(h); seg.setDate(seg.getDate() - ((seg.getDay() + 6) % 7)); const sex = new Date(seg); sex.setDate(sex.getDate() + 4); $('rDe').value = ymdInput(seg.getTime()); $('rAte').value = ymdInput(sex.getTime()); }
 $('rLimpar').onclick = () => { try { localStorage.removeItem(K_REC); } catch (e) {} RECCACHE = null; $('rMsg').textContent = 'Recusas apagadas.'; mostrarCompra(); };
 { const c0 = alertaCfg(); $('cLim').value = c0.lim; $('cIgn').value = c0.ign; }
 ['cLim', 'cIgn'].forEach(k => $(k).addEventListener('change', () => { const lim = parseInt($('cLim').value, 10); alertaGravar({ lim: lim > 0 ? lim : 10, ign: $('cIgn').value }); $('cLim').value = alertaCfg().lim; mostrarCompra(); atualizarAlertaHoje(); }));
@@ -954,7 +957,7 @@ function mostrarResumo() {
   $('sCards').replaceChildren(card('Pedidos', S.peds.length, S.semProd ? S.semProd + ' sem produtos lidos' : 'todos com produtos'), card('Unidades', un, comProd ? (Math.round(10 * un / comProd) / 10).toString().replace('.', ',') + ' por pedido' : ''), card('Produtos diferentes', S.todos.length, S.todos.filter(a => a.alerta).length + ' com saída alta'), card('Sacolas usadas', sacTot, U.peds.filter(x => !x.b.sacolas.length).length + ' pedido(s) sem sacola'), card('Etiquetas Argox', U.c.argox, (Math.round(10 * U.c.argox / matCfg().cap) / 10).toString().replace('.', ',') + ' rolo(s)'));
   const top = S.todos.slice().sort((a, b) => b.un - a.un || b.peds.size - a.peds.size).slice(0, 15);
   const tb = $('sTop'); tb.replaceChildren();
-  top.forEach((a, i) => { const tr = el('tr'); const tdN = el('td', '', a.n || a.e); if (a.alerta) { tdN.append(document.createTextNode(' ')); tdN.append(el('span', 'tag e', 'saída alta')); } tr.append(el('td', 'mut', i + 1), tdN, tdUnidades(a), el('td', 'n', a.peds.size)); tb.append(tr); });
+  top.forEach((a, i) => { const tr = el('tr'); const tdN = el('td', '', a.n || a.e); if (a.alerta) { tdN.append(document.createTextNode(' ')); tdN.append(el('span', 'tag e', 'saída alta')); } const rcx = recPorEan().get(a.e); if (rcx) { tdN.append(document.createTextNode(' ')); tdN.append(el('span', 'tag ' + rcx.cls, 'recusa: ' + rcx.q + ' un.')); } tr.append(el('td', 'mut', i + 1), tdN, tdUnidades(a), el('td', 'n', a.peds.size)); tb.append(tr); });
   if (!top.length) { const tr = el('tr'); const td = el('td', 'mut', 'Nenhum produto nesta semana.'); td.colSpan = 4; tr.append(td); tb.append(tr); }
   const mt = $('sMat'); mt.replaceChildren();
   const linhasMat = MATS.map(m => [m.nome, U.c[m.k]]).concat([['Sem sacola (sacaria sozinha)', U.peds.filter(x => !x.b.sacolas.length).length]]);
@@ -964,16 +967,51 @@ function mostrarResumo() {
   S.peds.forEach(r => { const d = new Date(tSaida(r)); d.setHours(0, 0, 0, 0); const k = d.getTime(); const a = porDia.get(k) || { p: 0, u: 0 }; a.p++; (r.itens || []).forEach(i => { a.u += i.q > 0 ? i.q : 1; }); porDia.set(k, a); });
   const dt = $('sDias'); dt.replaceChildren(); const linhasDia = [];
   for (let t = de; t <= ate; t += 864e5) { const d = new Date(t); d.setHours(0, 0, 0, 0); const a = porDia.get(d.getTime()) || { p: 0, u: 0 }; const nome = DIAS_SEM[d.getDay()] + ' ' + d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); linhasDia.push([nome, a.p, a.u]); const tr = el('tr'); tr.append(el('td', '', nome), el('td', 'n', a.p), el('td', 'n', a.u)); dt.append(tr); }
-  // recusas coladas (se houver)
+  // recusas coladas (se houver): resumo do que o Hubii recusou, cruzado com o que saiu na semana
   const recs = [...recPorEan().values()]; const box = $('sRec'); box.replaceChildren(); const g = lerRecGuardadas(); let txtRec = '';
   if (recs.length) {
-    const saiu = new Map(S.todos.map(a => [a.e, a.un])); const comprar = recs.filter(r => r.acao === 'Comprar (ruptura)');
-    const cruz = comprar.filter(r => saiu.has(r.e)).sort((a, b) => (b.v || 0) - (a.v || 0));
+    const saiu = new Map(S.todos.map(a => [a.e, a.un]));
+    const tot = f => recs.reduce((a, r) => a + f(r), 0);
+    const grupos = ['Comprar (ruptura)', 'Verificar ERP', 'Não trabalha'].map(nome => { const l = recs.filter(r => r.acao === nome); return { nome, l, n: l.length, q: l.reduce((a, r) => a + r.q, 0), v: l.reduce((a, r) => a + (r.v || 0), 0) }; });
+    const comprar = grupos[0];
+    const cruz = comprar.l.filter(r => saiu.has(r.e)).sort((a, b) => (b.v || 0) - (a.v || 0));
+    // período do relatório: o informado ao colar; sem informar, considera a semana em que foi colado
+    let pDe = g && g.de, pAte = g && g.ate, assumido = false;
+    if (!pDe || !pAte) { const t = new Date((g && g.t) || Date.now()); t.setHours(0, 0, 0, 0); const sg = new Date(t); sg.setDate(sg.getDate() - ((sg.getDay() + 6) % 7)); pDe = sg.getTime(); pAte = sg.getTime() + 5 * 864e5 - 1; assumido = true; }
+    const outro = pAte < de || pDe > ate;
+    const rotulo = 'Relatório de ' + dataDe(pDe) + ' a ' + dataDe(pAte) + (assumido ? ' (período não informado: considerei a semana em que foi colado)' : '') + ' · colado em ' + diaHora(g && g.t);
     box.append(el('h2', '', 'Recusas do Hubii'));
-    const d = el('div', 'met'); d.append(el('div', 'r', 'Coladas em ' + diaHora(g && g.t)), el('div', 'v', recs.length + ' produtos'), el('div', 's', recs.reduce((a, r) => a + r.q, 0) + ' un. recusadas · ' + brl(recs.reduce((a, r) => a + (r.v || 0), 0)) + ' perdidos · ' + comprar.length + ' para comprar (ruptura)'));
-    box.append(d);
-    if (cruz.length) { const p = el('p', 'mut', 'Saíram nesta semana e tiveram recusa por ruptura: ' + cruz.slice(0, 8).map(r => r.n.slice(0, 70) + ' (' + saiu.get(r.e) + ' saíram, ' + r.q + ' recusadas)').join('; ') + (cruz.length > 8 ? '...' : '')); p.style.fontSize = '12.5px'; box.append(p); }
-    txtRec = '\n\nRECUSAS DO HUBII (coladas em ' + diaHora(g && g.t) + '): ' + recs.length + ' produtos, ' + recs.reduce((a, r) => a + r.q, 0) + ' un., ' + brl(recs.reduce((a, r) => a + (r.v || 0), 0)) + ' perdidos; ' + comprar.length + ' para comprar (ruptura)' + (cruz.length ? ' (' + cruz.length + ' também saíram na semana)' : '') + '.';
+    const rot = el('p', 'mut', rotulo); rot.style.cssText = 'font-size:12.5px;margin:0 0 8px'; box.append(rot);
+    if (outro) { const av = el('div', 'alerta av', 'Atenção: este relatório é de outro período que a semana mostrada acima (' + dataDe(de) + ' a ' + dataDe(ate) + '). A coluna "Saiu na semana" compara com a semana mostrada.'); av.style.marginBottom = '10px'; box.append(av); }
+    const card = (r, v, sub) => { const m = el('div', 'met'); m.append(el('div', 'r', r), el('div', 'v', v), el('div', 's', sub || '')); return m; };
+    const cards = el('div', 'metricas'); cards.append(card('Produtos recusados', recs.length, ''), card('Unidades recusadas', tot(r => r.q), ''), card('Valor perdido', brl(tot(r => r.v || 0)), ''), card('Para comprar (ruptura)', comprar.n + (comprar.n === 1 ? ' produto' : ' produtos'), comprar.q + ' un. · ' + brl(comprar.v) + ' perdidos'));
+    box.append(cards);
+    const duas = el('div', 'duas');
+    // esquerda: o que mais foi recusado (por valor perdido)
+    const esq = el('div'); esq.append(el('h2', '', 'O que mais foi recusado'));
+    const tb = el('table'); const th = el('tr'); ['Produto', 'Ação', 'Qtd.', 'Valor', 'Saiu na semana'].forEach((t, i) => th.append(el('th', i >= 2 ? 'n' : '', t))); const hd = el('thead'); hd.append(th); tb.append(hd);
+    const tbody = el('tbody'); const topRec = recs.slice().sort((a, b) => (b.v || 0) - (a.v || 0)).slice(0, 10);
+    topRec.forEach(r => { const tr = el('tr'); const tdA = el('td'); tdA.append(el('span', 'tag ' + r.cls, r.acao)); const sx = saiu.get(r.e); tr.append(el('td', '', r.n), tdA, el('td', 'n', r.q), el('td', 'n', brl(r.v)), el('td', 'n ' + (sx ? 'okc' : 'mut'), sx ? sx + ' un.' : '—')); tbody.append(tr); });
+    tb.append(tbody); const wrap = el('div', 'tabela'); wrap.append(tb); esq.append(wrap); duas.append(esq);
+    // direita: por ação + o que saiu e foi recusado por ruptura
+    const dir = el('div'); dir.append(el('h2', '', 'Por ação'));
+    const tb2 = el('table'); const th2 = el('tr'); ['Ação', 'Produtos', 'Qtd.', 'Valor'].forEach((t, i) => th2.append(el('th', i ? 'n' : '', t))); const hd2 = el('thead'); hd2.append(th2); tb2.append(hd2);
+    const tb2b = el('tbody'); const cls = { 'Comprar (ruptura)': 'c', 'Verificar ERP': 'e', 'Não trabalha': 'n' };
+    grupos.forEach(gr => { const tr = el('tr'); const tdA = el('td'); tdA.append(el('span', 'tag ' + cls[gr.nome], gr.nome)); tr.append(tdA, el('td', 'n', gr.n), el('td', 'n', gr.q), el('td', 'n', brl(gr.v))); tb2b.append(tr); });
+    tb2.append(tb2b); const w2 = el('div', 'tabela'); w2.append(tb2); dir.append(w2);
+    if (cruz.length) {
+      dir.append(el('h2', '', 'Saiu e foi recusado por ruptura'));
+      const tb3 = el('table'); const th3 = el('tr'); ['Produto', 'Saiu', 'Recusado'].forEach((t, i) => th3.append(el('th', i ? 'n' : '', t))); const hd3 = el('thead'); hd3.append(th3); tb3.append(hd3);
+      const tb3b = el('tbody'); cruz.slice(0, 8).forEach(r => { const tr = el('tr'); tr.append(el('td', '', r.n), el('td', 'n', saiu.get(r.e) + ' un.'), el('td', 'n', r.q + ' un.')); tb3b.append(tr); });
+      tb3.append(tb3b); const w3 = el('div', 'tabela'); w3.append(tb3); dir.append(w3);
+      if (cruz.length > 8) { const m = el('p', 'mut', '... e mais ' + (cruz.length - 8) + ' na aba Produtos (filtro "Só o que saiu e teve recusa").'); m.style.fontSize = '12.5px'; dir.append(m); }
+    }
+    duas.append(dir); box.append(duas);
+    txtRec = '\n\nRECUSAS DO HUBII (' + dataDe(pDe) + ' a ' + dataDe(pAte) + (assumido ? ', período assumido' : '') + ')\n' + recs.length + ' produtos recusados · ' + tot(r => r.q) + ' un. · ' + brl(tot(r => r.v || 0)) + ' perdidos'
+      + '\nPOR AÇÃO\n' + grupos.map(gr => gr.nome + ': ' + gr.n + ' produtos, ' + gr.q + ' un., ' + brl(gr.v)).join('\n')
+      + '\nO QUE MAIS FOI RECUSADO\n' + topRec.map((r, i) => (i + 1) + '. ' + r.n + ' (' + r.acao + '): ' + r.q + ' un., ' + brl(r.v) + (saiu.has(r.e) ? ' · saíram ' + saiu.get(r.e) + ' un. na semana' : '')).join('\n')
+      + (cruz.length ? '\nSAIU E FOI RECUSADO POR RUPTURA\n' + cruz.slice(0, 8).map(r => r.n + ': saíram ' + saiu.get(r.e) + ' un., recusadas ' + r.q + ' un.').join('\n') : '')
+      + (outro ? '\n(Atenção: relatório de outro período que a semana do resumo.)' : '');
   }
   RESUMO_TXT = 'RESUMO DA SEMANA (' + dataDe(de) + ' a ' + dataDe(ate) + ')\n' + S.peds.length + ' pedidos · ' + un + ' unidades · ' + S.todos.length + ' produtos diferentes'
     + '\n\nPRODUTOS QUE MAIS SAÍRAM\n' + top.map((a, i) => (i + 1) + '. ' + (a.n || a.e) + ': ' + a.un + ' un.' + (cxTxt(a.un, a.n) ? ' = ' + cxTxt(a.un, a.n) : '') + ' (' + a.peds.size + ' pedidos)').join('\n')
