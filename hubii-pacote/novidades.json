@@ -1,6 +1,16 @@
 {
  "versoes": [
   {
+   "v": "2.25.0",
+   "data": "24/11/2026",
+   "itens": [
+    "Nova aba Desempenho no painel: o mesmo relatório de desempenho da extensão (tempo liberado, fechamento do mês com projeção, por semana, por dia e execuções), sem precisar abrir o Hubii. Dá para copiar o resumo para mandar ao supervisor.",
+    "A planilha do Google ganha as abas Eventos, Desempenho por dia e Desempenho por mês (tempo da Central, tempo à mão estimado e tempo liberado).",
+    "Importante: quem já ligou a planilha precisa atualizar o script do Google: em Ajuda e backup > Planilha na nuvem, \"Copiar código do script\", colar no Apps Script e fazer Implementar > Gerir implementações > lápis > Nova versão. A Central avisa quando o script está desatualizado.",
+    "\"Restaurar da planilha\" agora também traz os registros de desempenho."
+   ]
+  },
+  {
    "v": "2.24.0",
    "data": "24/11/2026",
    "itens": [

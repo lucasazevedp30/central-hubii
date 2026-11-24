@@ -1,8 +1,8 @@
 {
-  "versao": "2.24.0",
-  "arquivo": "versoes/hubii-central-2.24.0.zip",
-  "sha256": "7237ea11f13a39582ea685f354d846db5d0a6e5fa07493c52cd3ab410d0047d4",
-  "tamanho": 1013218,
-  "data": "2026-11-24T19:09:48Z",
-  "novidades": "- Novo cartão \"Prazo de despacho de hoje\" na aba Hoje: mostra quantos pedidos ainda estão a faturar e a etiquetar, quantos estão atrasados e quanto falta para o prazo (fica amarelo com menos de 2 h e vermelho com menos de 1 h). Atualiza a cada 5 minutos com o Hubii aberto.\n- Novo aviso \"Material acabando\" na aba Hoje, com base na contagem de Materiais de separação. O limite de dias é editável (campo \"Avisar na aba Hoje com menos de N dias\")."
+  "versao": "2.25.0",
+  "arquivo": "versoes/hubii-central-2.25.0.zip",
+  "sha256": "555a53691beac2a45bb590cf225e4357778bb1e0412138f1e9df55b55bcb4c23",
+  "tamanho": 1017359,
+  "data": "2026-11-24T19:19:03Z",
+  "novidades": "- Nova aba Desempenho no painel: o mesmo relatório de desempenho da extensão (tempo liberado, fechamento do mês com projeção, por semana, por dia e execuções), sem precisar abrir o Hubii. Dá para copiar o resumo para mandar ao supervisor.\n- A planilha do Google ganha as abas Eventos, Desempenho por dia e Desempenho por mês (tempo da Central, tempo à mão estimado e tempo liberado).\n- Importante: quem já ligou a planilha precisa atualizar o script do Google: em Ajuda e backup > Planilha na nuvem, \"Copiar código do script\", colar no Apps Script e fazer Implementar > Gerir implementações > lápis > Nova versão. A Central avisa quando o script está desatualizado.\n- \"Restaurar da planilha\" agora também traz os registros de desempenho."
 }
