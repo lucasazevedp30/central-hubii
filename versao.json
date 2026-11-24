@@ -1,8 +1,8 @@
 {
-  "versao": "2.23.1",
-  "arquivo": "versoes/hubii-central-2.23.1.zip",
-  "sha256": "f140ab7cb16d8a4872de80a94afde3f55ebe1fb67221cbb974ec7bac47ad1d90",
-  "tamanho": 1011157,
-  "data": "2026-11-24T12:18:06Z",
-  "novidades": "- Baixa Hubii: quando a janela de pagamento demora para mostrar o campo \"Valor\" (ou para preencher o valor), a Central espera até 15 s em vez de parar na hora com \"não achei o campo\". Se o valor for diferente do restante, continua parando, como antes.\n- A mensagem de parada agora traz detalhes (campos visíveis, rótulo \"Valor\", botão Confirmar) para achar a causa se repetir.\n- Se a janela \"Pagamento em Hubii\" não abrir, a rotina para ali (antes seguia e mostrava uma mensagem confusa)."
+  "versao": "2.24.0",
+  "arquivo": "versoes/hubii-central-2.24.0.zip",
+  "sha256": "7237ea11f13a39582ea685f354d846db5d0a6e5fa07493c52cd3ab410d0047d4",
+  "tamanho": 1013218,
+  "data": "2026-11-24T19:09:48Z",
+  "novidades": "- Novo cartão \"Prazo de despacho de hoje\" na aba Hoje: mostra quantos pedidos ainda estão a faturar e a etiquetar, quantos estão atrasados e quanto falta para o prazo (fica amarelo com menos de 2 h e vermelho com menos de 1 h). Atualiza a cada 5 minutos com o Hubii aberto.\n- Novo aviso \"Material acabando\" na aba Hoje, com base na contagem de Materiais de separação. O limite de dias é editável (campo \"Avisar na aba Hoje com menos de N dias\")."
 }
