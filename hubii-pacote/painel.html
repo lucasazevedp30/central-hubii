@@ -128,7 +128,7 @@ footer .esp{flex:1}
   <div class="relogio"><b id="hora">--:--</b><div class="t2" id="data"></div></div>
 </header>
 <main id="tela">
-  <div class="abas"><button class="aba on" data-v="vHoje">Hoje</button><button class="aba" data-v="vPend">Pendências</button><button class="aba" data-v="vHist">Histórico de pedidos</button><button class="aba" data-v="vCompra">Compra contínua</button><button class="aba" data-v="vAjuda">Ajuda e backup</button><button class="aba" data-v="vNovid">Novidades</button></div>
+  <div class="abas"><button class="aba on" data-v="vHoje">Hoje</button><button class="aba" data-v="vPend">Pendências</button><button class="aba" data-v="vHist">Histórico de pedidos</button><button class="aba" data-v="vCompra">Compra contínua</button><button class="aba" data-v="vAjuda">Ajuda e backup</button><button class="aba" data-v="vDesemp">Desempenho</button><button class="aba" data-v="vNovid">Novidades</button></div>
   <div class="chips" id="chips"></div>
   <div class="alertas" id="alertas"></div>
 <section class="vista on" id="vHoje">
@@ -169,6 +169,18 @@ footer .esp{flex:1}
   </div>
   <div class="resumo" id="hRes"></div>
   <div class="tabela"><div class="rol"><table><thead><tr><th>Pedido</th><th>Dia</th><th>Descritivo</th><th>Etiqueta</th><th>Conferido</th><th>Código BR</th><th>Produtos</th></tr></thead><tbody id="hCorpo"></tbody></table></div></div>
+</section>
+
+<section class="vista" id="vDesemp">
+  <div class="filtros">
+    <label>Período <select id="dpPer"><option value="mes" selected>Este mês</option><option value="mesant">Mês passado</option><option value="30">Últimos 30 dias</option><option value="7">Últimos 7 dias</option><option value="hoje">Hoje</option><option value="tudo">Todo o período registrado</option></select></label>
+    <button id="dpAtu">Atualizar</button>
+    <button class="pri" id="dpCopiar">Copiar resumo</button>
+  </div>
+  <div class="mut" id="dpAviso" style="font-size:12.5px;margin-bottom:8px"></div>
+  <style id="dpEstilo"></style>
+  <div class="rot" style="padding:6px 16px"><div id="dpCorpo"></div></div>
+  <p class="mut" style="font-size:12.5px;margin-top:10px">É o mesmo relatório de desempenho da extensão. O tempo da automação é medido a cada rotina; o tempo "à mão" é uma estimativa por item, com as premissas do relatório da extensão (descritivo, etiqueta, análise e baixa). Os registros chegam ao painel sozinhos, e vão também para a planilha do Google, se estiver ligada.</p>
 </section>
 
 <section class="vista" id="vNovid">
@@ -386,6 +398,7 @@ footer .esp{flex:1}
 <div class="fundoModal" id="fm"><div class="modal"><p id="fmTxt"></p><div class="bts"><button id="fmNao">Cancelar</button><button class="pri" id="fmSim">Continuar</button></div></div></div>
 
 <script src="/ext/planilha.js"></script>
+<script src="/ext/registro.js"></script>
 <script>
 const IC = {
   imp: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/></svg>',
@@ -575,6 +588,7 @@ document.querySelectorAll('.aba').forEach(b => b.onclick = () => {
   document.querySelectorAll('.vista').forEach(x => x.classList.toggle('on', x.id === b.dataset.v));
   vista = b.dataset.v;
   if (vista === 'vNovid') carregarNovidades();
+  if (vista === 'vDesemp') mostrarDesemp();
   if (vista === 'vAjuda') carregarNuvem();
   if (vista === 'vHist' || vista === 'vCompra') carregarHist().then(() => vista === 'vHist' ? mostrarHist() : mostrarCompra());
   if (vista === 'vPend') carregarPend().then(mostrarPend);
@@ -1202,7 +1216,7 @@ $('nuCopiarScript').onclick = async () => {
 };
 $('nuSalvar').onclick = async () => {
   nuMsg('Testando a conexão...'); const r = await nuAcao('nuvemsalvar', { url: $('nuUrl').value, loja: $('nuLoja').value });
-  nuMsg(r.msg || (r.ok ? 'Feito.' : 'Não deu certo.'), r.ok ? 'okc' : 'avc'); if (r.ok) $('nuUrl').value = ''; await carregarNuvem();
+  nuMsg(r.msg || (r.ok ? 'Feito.' : 'Não deu certo.'), r.ok && !r.aviso ? 'okc' : 'avc'); if (r.ok) $('nuUrl').value = ''; await carregarNuvem();
 };
 $('nuEnviar').onclick = async () => {
   const b = $('nuEnviar'); b.disabled = true;
@@ -1216,7 +1230,7 @@ $('nuEnviar').onclick = async () => {
 $('nuRestaurar').onclick = async () => {
   if (!await perguntar('Trazer da planilha os pedidos que faltam neste computador? Nada é apagado nem trocado; pode repetir sem duplicar.')) return;
   nuMsg('Restaurando da planilha... (pode levar um pouco)'); const r = await nuAcao('nuvemrestaurar');
-  nuMsg(r.msg || 'Não deu certo.', r.ok ? 'okc' : 'avc'); if (r.ok) { await carregarHist(true); } await carregarNuvem();
+  nuMsg(r.msg || 'Não deu certo.', r.ok ? 'okc' : 'avc'); if (r.ok) { await carregarHist(true); try { await carregarEventos(true); } catch (e) {} } await carregarNuvem();
 };
 $('nuCodigo').onclick = async () => {
   if (!NU || !NU.codigo) return;
@@ -1225,6 +1239,51 @@ $('nuCodigo').onclick = async () => {
 $('nuDesligar').onclick = async () => {
   if (!await perguntar('Desligar o envio para a planilha? O que já está na planilha continua lá.')) return;
   const r = await nuAcao('nuvemdesligar'); nuMsg(r.msg || '', r.ok ? 'okc' : 'avc'); $('nuUrl').value = ''; await carregarNuvem();
+};
+
+// ---------- desempenho: o mesmo relatório da extensão (registro.js), com os eventos guardados pelo painel
+let EVENTOS = [], evT = 0, ULT_DESEMP = null;
+async function carregarEventos(forcar) {
+  if (!forcar && Date.now() - evT < 15000) return;
+  const txt = await (await fetch('/api/eventos', { cache: 'no-store' })).text();
+  const m = new Map();
+  txt.split('\n').forEach(l => { if (!l || l[0] !== '{') return; try { const e = JSON.parse(l); if (e && e._k && e.t && !m.has(e._k)) m.set(e._k, e); } catch (x) {} });
+  EVENTOS = [...m.values()]; evT = Date.now();
+}
+const diasUteisDoMes = (ano, mes) => { let n = 0; const f = new Date(ano, mes + 1, 0).getDate(); for (let d = 1; d <= f; d++) { const w = new Date(ano, mes, d).getDay(); if (w !== 0 && w !== 6) n++; } return n; };
+function faixaDesemp() {
+  const agora = Date.now(); const ini0 = new Date(); ini0.setHours(0, 0, 0, 0); const v = $('dpPer').value;
+  const nome = d => d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  if (v === 'hoje') return [ini0.getTime(), agora, 'hoje'];
+  if (v === '7') return [ini0.getTime() - 6 * 864e5, agora, 'últimos 7 dias'];
+  if (v === '30') return [ini0.getTime() - 29 * 864e5, agora, 'últimos 30 dias'];
+  if (v === 'mes') { const i = new Date(); i.setDate(1); i.setHours(0, 0, 0, 0); return [i.getTime(), agora, 'mês de ' + nome(i)]; }
+  if (v === 'mesant') { const i = new Date(); i.setDate(1); i.setHours(0, 0, 0, 0); const f = new Date(i.getTime() - 1); i.setMonth(i.getMonth() - 1); return [i.getTime(), f.getTime(), 'mês de ' + nome(i)]; }
+  return [0, agora, 'todo o período registrado'];
+}
+async function mostrarDesemp() {
+  const R = window.__centralReg;
+  if (!R || !R.calcular) { $('dpCorpo').textContent = 'O gerador do relatório não carregou. Aperte F5.'; return; }
+  try { await carregarEventos(); } catch (e) { $('dpCorpo').textContent = 'Não consegui ler os registros.'; return; }
+  const premissas = ((ULT_ESTADO && ULT_ESTADO.fontes) || []).map(f => f.d && f.d.base).filter(Boolean)[0];
+  const base = Object.assign({}, R.DEF, premissas || {});
+  const [a, b, rot] = faixaDesemp(); const m = R.calcular(EVENTOS, base, a, b);
+  const v = $('dpPer').value;
+  if (v === 'mes' || v === 'mesant') {
+    const ini = new Date(a); m.mensal = { rot }; const agoraD = new Date();
+    if (ini.getFullYear() === agoraD.getFullYear() && ini.getMonth() === agoraD.getMonth() && m.dias.length >= 3) { const uteis = diasUteisDoMes(ini.getFullYear(), ini.getMonth()); const lib = Math.max(0, m.tMan - m.tAuto); m.mensal.proj = { uteis, ms: lib / m.dias.length * uteis }; }
+  }
+  ULT_DESEMP = { m, base, rot };
+  $('dpEstilo').textContent = R.CSS;
+  $('dpCorpo').innerHTML = R.corpoHtml(m, base, '');
+  $('dpAviso').textContent = !EVENTOS.length ? 'Ainda não chegaram registros de desempenho a este painel. Com a extensão ligada eles chegam sozinhos em alguns minutos (ou use "Restaurar da planilha", em Ajuda e backup).' : (m.total ? '' : 'Nenhum registro neste período.');
+}
+$('dpPer').addEventListener('input', mostrarDesemp);
+$('dpAtu').onclick = async () => { await carregarEventos(true); mostrarDesemp(); };
+$('dpCopiar').onclick = async () => {
+  if (!ULT_DESEMP) await mostrarDesemp(); if (!ULT_DESEMP) return;
+  const t = window.__centralReg.textoPlano(ULT_DESEMP.m, ULT_DESEMP.base, ULT_DESEMP.rot);
+  try { await navigator.clipboard.writeText(t); toast('Resumo de desempenho copiado.'); } catch (e) { toast('Não consegui copiar.'); }
 };
 
 // ---------- novidades (lista de versões, lida do arquivo novidades.json)

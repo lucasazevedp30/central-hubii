@@ -31,10 +31,11 @@ const resumoDia = async () => {
   const todo = await chrome.storage.local.get(null);
   const ini = new Date(); ini.setHours(0, 0, 0, 0); const t0 = ini.getTime();
   const hoje = { descritivos: { n: 0, ult: 0 }, etiquetas: { n: 0, ult: 0 } };
-  let coleta = null;
+  let coleta = null; const evAck = todo.painel_ev_ack || 0; const evNovos = [];
   for (const k in todo) {
     if (!k.startsWith('ev_')) continue;
     const e = todo[k]; if (!e || !e.t) continue;
+    if (e.t > evAck) evNovos.push(Object.assign({ _k: k }, e));
     if ((e.k === 'descritivos' || e.k === 'etiquetas') && e.t >= t0) { hoje[e.k].n += e.n || 0; hoje[e.k].ult = Math.max(hoje[e.k].ult, e.t); }
     if (e.k === 'coleta' && (!coleta || e.t > coleta.t)) coleta = { t: e.t, n: e.n || 0, hub: e.hub };
   }
@@ -50,7 +51,8 @@ const resumoDia = async () => {
   let pend = null;
   // coletas novas (2.18.1+) trazem quantas são do Hubii; nas antigas, usa a contagem da lista coletada se for da mesma coleta
   if (coleta) pend = { t: coleta.t, lidas: coleta.n, n: coleta.hub != null ? coleta.hub : (todo.painel_pend && todo.painel_pend.n != null && todo.painel_pend.t >= coleta.t - 600000) ? todo.painel_pend.n : null };
-  cacheDia = { t: Date.now(), v: { hoje, pend } };
+  evNovos.sort((a, b) => a.t - b.t);
+  cacheDia = { t: Date.now(), v: { hoje, pend, ev: evNovos.slice(0, 300), base: todo.central_base || null } };
   return cacheDia.v;
 };
 const enviarPainel = async forcar => {
@@ -63,12 +65,13 @@ const enviarPainel = async forcar => {
     const fonte = await fonteId();
     const hist = await histParaEnviar();
     const pd = await pendParaEnviar();
-    const corpo = { fonte, versao: chrome.runtime.getManifest().version, t: agora, dia: new Date().toLocaleDateString('pt-BR'), hoje: r0.hoje, pend: r0.pend, paginas: [...paginas.values()].map(v => v.d), hist: hist.map(h => JSON.stringify(Object.assign({ fonte }, h))) };
+    const corpo = { fonte, versao: chrome.runtime.getManifest().version, t: agora, dia: new Date().toLocaleDateString('pt-BR'), hoje: r0.hoje, pend: r0.pend, paginas: [...paginas.values()].map(v => v.d), hist: hist.map(h => JSON.stringify(Object.assign({ fonte }, h))), eventos: (r0.ev || []).map(e => JSON.stringify(e)), base: r0.base };
     if (pd) corpo.pendDados = pd.dados;
     const r = await fetch(PAINEL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Central': '1' }, body: JSON.stringify(corpo) });
     if (r.ok) {
       const j = await r.json();
       if (j.histOk && hist.length) await histConfirmar(hist);
+      if (j.evOk && r0.ev && r0.ev.length) { await chrome.storage.local.set({ painel_ev_ack: Math.max(...r0.ev.map(e => e.t)) }); cacheDia.t = 0; }
       if (pd && j.pendOk) pendEnviado = pd.sig;
       (j.ordens || []).forEach(o => {
         if (o.acao === 'parar') for (const id of paginas.keys()) chrome.tabs.sendMessage(id, { central: 'painel-parar' }).catch(() => {});

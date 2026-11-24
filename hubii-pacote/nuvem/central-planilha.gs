@@ -17,6 +17,15 @@ const FUSO = 'America/Sao_Paulo';
 const CAB_PEDIDOS = ['Loja', 'Pedido', 'Dia', 'Descritivo', 'Etiqueta', 'Reimpressão', 'Conferido', 'Código BR', 'Produtos', 'Unidades', 'Atualizado', 'JSON'];
 const CAB_DIA = ['Loja', 'Dia', 'Pedidos (descritivos)', 'Unidades', 'Etiquetas', 'Conferidos', 'Sacola 30x20', 'Sacola 35x45', 'Sacola 45x50', 'Sacola 50x60', 'Sem sacola'];
 const COL_JSON = CAB_PEDIDOS.length - 1;
+const ABA_EVENTOS = 'Eventos';
+const ABA_DESEMP_DIA = 'Desempenho por dia';
+const ABA_DESEMP_MES = 'Desempenho por mês';
+const CAB_EVENTOS = ['Loja', 'Chave', 'Dia', 'Rotina', 'Início', 'Fim', 'Duração (s)', 'Itens', 'JSON'];
+const COL_EV_JSON = CAB_EVENTOS.length - 1;
+const CAB_DESEMP_DIA = ['Loja', 'Dia', 'Descritivos', 'Etiquetas', 'Pendências analisadas', 'Baixas', 'Tempo da Central (min)', 'Tempo à mão estimado (min)', 'Tempo liberado (min)'];
+const CAB_DESEMP_MES = ['Loja', 'Mês', 'Dias de uso', 'Descritivos', 'Etiquetas', 'Pendências analisadas', 'Baixas', 'Tempo da Central (h)', 'Tempo à mão estimado (h)', 'Tempo liberado (h)', 'Dias de trabalho liberados'];
+// premissas de tempo à mão (segundos por item), as mesmas do relatório de desempenho da extensão; a Central manda as suas
+const DEF = { desc: 45, etq: 30, analise: 180, baixa: 120, dia: 8 };
 
 function saida(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
 
@@ -26,6 +35,7 @@ function doPost(e) {
     if (d.chave !== CHAVE) return saida({ ok: false, erro: 'chave' });
     if (d.acao === 'testar') return saida(testar());
     if (d.acao === 'historico') return saida(gravarHistorico(d));
+    if (d.acao === 'eventos') return saida(gravarEventos(d));
     return saida({ ok: false, erro: 'acao desconhecida' });
   } catch (err) { return saida({ ok: false, erro: String(err) }); }
 }
@@ -36,11 +46,13 @@ function doGet(e) {
     if (p.chave !== CHAVE) return saida({ ok: false, erro: 'chave' });
     if (p.acao === 'testar') return saida(testar());
     if (p.acao === 'historico') return saida(lerHistorico(p));
+    if (p.acao === 'eventos') return saida(lerEventos(p));
     return saida({ ok: false, erro: 'acao desconhecida' });
   } catch (err) { return saida({ ok: false, erro: String(err) }); }
 }
 
-function testar() { return { ok: true, msg: 'conectado', planilha: SpreadsheetApp.getActive().getName() }; }
+const VERSAO_SCRIPT = 2;   // 1 = pedidos; 2 = pedidos + desempenho (eventos)
+function testar() { return { ok: true, msg: 'conectado', planilha: SpreadsheetApp.getActive().getName(), versao: VERSAO_SCRIPT }; }
 
 function aba(nome, cab) {
   const ss = SpreadsheetApp.getActive();
@@ -130,6 +142,80 @@ function lerHistorico(p) {
   const vals = qtd ? sh.getRange(desde, 1, qtd, CAB_PEDIDOS.length).getValues() : [];
   const loja = String(p.loja || '');
   const registros = vals.filter(l => !loja || l[0] === loja).map(l => l[COL_JSON]).filter(x => typeof x === 'string' && x.charAt(0) === '{');
+  return { ok: true, registros, proximo: desde + qtd <= ate ? desde + qtd : null, total: ate - 1 };
+}
+
+// ---------- desempenho (tempo poupado): eventos de cronometragem das rotinas
+function gravarEventos(d) {
+  const lock = LockService.getScriptLock(); lock.waitLock(30000);
+  try {
+    const loja = String(d.loja || '').slice(0, 60);
+    const sh = aba(ABA_EVENTOS, CAB_EVENTOS);
+    const n = Math.max(0, sh.getLastRow() - 1);
+    const dados = n > 0 ? sh.getRange(2, 1, n, CAB_EVENTOS.length).getValues() : [];
+    const vistos = {}; dados.forEach(l => { vistos[l[0] + '|' + l[1]] = true; });
+    const novos = []; let ignorados = 0;
+    (d.eventos || []).forEach(e => {
+      if (!e || !e.t || !e.k || !/^ev_\d+_[a-z0-9]+$/.test(String(e._k))) { ignorados++; return; }
+      const k = loja + '|' + e._k; if (vistos[k]) return; vistos[k] = true;
+      const ini = e.t0 || (e.t - (e.ms || 0));
+      novos.push([loja, e._k, diaTxt(e.t), e.k + (e.res ? ' (' + e.res + ')' : ''), hora(ini), hora(e.t), Math.round((e.t - ini) / 1000), e.n == null ? '' : e.n, JSON.stringify(e)]);
+    });
+    if (novos.length) sh.getRange(n + 2, 1, novos.length, CAB_EVENTOS.length).setValues(novos);
+    const todos = dados.concat(novos);
+    desempenho(todos, Object.assign({}, DEF, d.base || {}));
+    return { ok: true, novos: novos.length, ignorados, total: todos.length };
+  } finally { lock.releaseLock(); }
+}
+
+// a mesma regra do relatório da extensão (registro.js, calcular): o que cada evento conta como itens e tempo
+function linhaEvento(e) {
+  if (e.k === 'descritivos' || e.k === 'etiquetas') return { linha: e.k, ms: e.t - e.t0, n: e.n || 0 };
+  if (e.k === 'coleta' || e.k === 'verificar' || e.k === 'onehub') return { linha: 'analise', ms: e.t - e.t0, n: e.k === 'verificar' ? (e.n || 0) : 0 };
+  if (e.k === 'baixa' && !/^teste/i.test(e.res || '')) return { linha: 'baixa', ms: e.ms || 0, n: e.res === 'baixado' ? 1 : 0 };
+  return null;
+}
+function desempenho(linhas, base) {
+  const man = { descritivos: base.desc, etiquetas: base.etq, analise: base.analise, baixa: base.baixa };
+  const zero = () => ({ descritivos: 0, etiquetas: 0, analise: 0, baixa: 0 });
+  const dias = {};
+  linhas.forEach(l => {
+    let e; try { e = JSON.parse(l[COL_EV_JSON]); } catch (x) { return; }
+    const x = linhaEvento(e); if (!x) return;
+    const k = l[0] + '|' + diaChave(e.t);
+    const a = dias[k] || (dias[k] = { loja: l[0], chave: diaChave(e.t), t: e.t, n: zero(), ms: zero() });
+    a.n[x.linha] += x.n; a.ms[x.linha] += x.ms;
+  });
+  const lista = Object.keys(dias).map(k => dias[k]);
+  lista.forEach(a => { a.auto = 0; a.manual = 0; Object.keys(man).forEach(g => { a.auto += a.ms[g]; a.manual += a.n[g] * man[g] * 1000; }); });
+  lista.sort((a, b) => a.loja.localeCompare(b.loja) || (a.chave < b.chave ? 1 : -1));
+  const min = ms => Math.round(ms / 6000) / 10;
+  const h = ms => Math.round(ms / 360000) / 10;
+  const sd = aba(ABA_DESEMP_DIA, CAB_DESEMP_DIA);
+  const ud = sd.getLastRow(); if (ud > 1) sd.getRange(2, 1, ud - 1, CAB_DESEMP_DIA.length).clearContent();
+  if (lista.length) sd.getRange(2, 1, lista.length, CAB_DESEMP_DIA.length).setValues(lista.map(a => [a.loja, diaTxt(a.t), a.n.descritivos, a.n.etiquetas, a.n.analise, a.n.baixa, min(a.auto), min(a.manual), min(Math.max(0, a.manual - a.auto))]));
+  const meses = {};
+  lista.forEach(a => {
+    const k = a.loja + '|' + a.chave.slice(0, 7);
+    const m = meses[k] || (meses[k] = { loja: a.loja, chave: a.chave.slice(0, 7), dias: 0, n: zero(), auto: 0, manual: 0 });
+    m.dias++; Object.keys(m.n).forEach(g => { m.n[g] += a.n[g]; }); m.auto += a.auto; m.manual += a.manual;
+  });
+  const lm = Object.keys(meses).map(k => meses[k]).sort((a, b) => a.loja.localeCompare(b.loja) || (a.chave < b.chave ? 1 : -1));
+  const sm = aba(ABA_DESEMP_MES, CAB_DESEMP_MES);
+  const um = sm.getLastRow(); if (um > 1) sm.getRange(2, 1, um - 1, CAB_DESEMP_MES.length).clearContent();
+  if (lm.length) sm.getRange(2, 1, lm.length, CAB_DESEMP_MES.length).setValues(lm.map(m => { const lib = Math.max(0, m.manual - m.auto); return [m.loja, m.chave.slice(5) + '/' + m.chave.slice(0, 4), m.dias, m.n.descritivos, m.n.etiquetas, m.n.analise, m.n.baixa, h(m.auto), h(m.manual), h(lib), Math.round(lib / (base.dia * 3600000) * 10) / 10]; }));
+}
+
+function lerEventos(p) {
+  const sh = SpreadsheetApp.getActive().getSheetByName(ABA_EVENTOS);
+  if (!sh || sh.getLastRow() < 2) return { ok: true, registros: [], proximo: null, total: 0 };
+  const ate = sh.getLastRow();
+  const desde = Math.max(2, parseInt(p.desde, 10) || 2);
+  const limite = Math.max(1, Math.min(500, parseInt(p.limite, 10) || 300));
+  const qtd = Math.max(0, Math.min(limite, ate - desde + 1));
+  const vals = qtd ? sh.getRange(desde, 1, qtd, CAB_EVENTOS.length).getValues() : [];
+  const loja = String(p.loja || '');
+  const registros = vals.filter(l => !loja || l[0] === loja).map(l => l[COL_EV_JSON]).filter(x => typeof x === 'string' && x.charAt(0) === '{');
   return { ok: true, registros, proximo: desde + qtd <= ate ? desde + qtd : null, total: ate - 1 };
 }
 

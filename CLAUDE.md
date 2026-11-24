@@ -123,5 +123,13 @@ extensão (apaga os dados); recarregar sempre da mesma pasta.
   contagens ("o Hubii não informou o prazo"). Confirmar na loja.
 - Aviso de material acabando (2.24.0, aba Hoje): `coberturaMateriais` usa a contagem de Materiais de separação; avisa
   quando "dá para" < N dias (`aviso` em `central_materiais`, padrão 3) ou quando o estoque estimado zerou.
+- Desempenho (2.25.0, aba Desempenho do painel + abas na planilha): os eventos `ev_*` (cronometragem das rotinas) vão da
+  extensão ao painel (`background.js` `resumoDia`: eventos com t > `painel_ev_ack` + premissas `central_base`; resposta
+  `evOk`) e ficam em `%LOCALAPPDATA%\CentralHubii\eventos.ndjson` (duplicados são descartados por `_k` na leitura) e
+  `desempenho-base.json`. O painel carrega `/ext/registro.js` e usa `calcular`/`corpoHtml`/`textoPlano`: é o MESMO
+  relatório da extensão. Na planilha: `acao: 'eventos'` (+ `base`) cria as abas Eventos, Desempenho por dia e Desempenho
+  por mês; `linhaEvento` no `.gs` copia a regra de `calcular` do `registro.js` (mudou lá, mude lá também). `ultimoEv` em
+  `nuvem-estado.json`; "Restaurar da planilha" traz pedidos e eventos. `VERSAO_SCRIPT = 2` no `.gs`: a Central avisa
+  quando o script do usuário é antigo (ele precisa colar o código novo e fazer "Nova versão" na implantação).
 - Reembolso da Shopee: esperando retorno do responsável. Vídeo: esperando áudios do ElevenLabs.
 - Por último (quando o resto estiver 100%): outras lojas — configuração por loja, instalador, fixar ID da extensão.
