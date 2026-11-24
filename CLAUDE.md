@@ -110,5 +110,10 @@ extensão (apaga os dados); recarregar sempre da mesma pasta.
   nos chats. Ideias futuras: aba de produtos por semana, modo acompanhamento (só leitura) para supervisor.
 - Aba Novidades (2.23.0): lê `hubii-pacote/novidades.json`; `publicar.sh` acrescenta cada versão sozinho a partir
   do arquivo de notas (linhas que começam com "- ").
+- Baixa, janela de pagamento (2.23.1, `baixa.js` `esperarCampoValor`): espera até 15 s o campo "Valor" aparecer com o valor
+  IGUAL ao RESTANTE (antes: 0,6 s e uma leitura só, e parava com "não achei o campo"). Valor diferente continua parando.
+  A mensagem de parada traz detalhes (campos visíveis, rótulo, botão Confirmar). O valor estar "selecionado" não influencia
+  a leitura (`.value`). Um chat antigo citou uma "2.15.4" com essa correção: ela nunca existiu nesta base (que parte da
+  2.15.3 enviada pelo usuário e segue em 2.16.0+). Nunca relaxar a checagem valor == restante: Finalizar venda não se desfaz.
 - Reembolso da Shopee: esperando retorno do responsável. Vídeo: esperando áudios do ElevenLabs.
 - Por último (quando o resto estiver 100%): outras lojas — configuração por loja, instalador, fixar ID da extensão.

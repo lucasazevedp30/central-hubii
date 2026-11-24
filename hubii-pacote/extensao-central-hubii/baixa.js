@@ -69,6 +69,27 @@ const achaTitulo = (frag, exato) => {
   return c.find(e => ![...e.children].some(k => c.includes(k))) || null;
 };
 const folhas = (raiz, f) => [...raiz.querySelectorAll('*')].filter(e => e.children.length === 0 && visivel(e) && f(nt(txt(e)), e));
+// Lê o campo "Valor" da janela de pagamento e espera até `seg` segundos ele aparecer com o valor IGUAL ao esperado (o RESTANTE).
+// O Hubii às vezes demora a montar a janela ou a preencher o valor. Devolve sempre o último estado lido (ok = achou e confere):
+// se o valor for outro, ok continua falso e a rotina para, como antes. Nunca paga um valor diferente do restante.
+const esperarCampoValor = async (achaModal, modalIni, esperado, seg) => {
+  const ler = () => {
+    let r = achaModal() || modalIni;
+    while (r && r.parentElement && !([...r.querySelectorAll('button')].some(x => nt(txt(x)).startsWith('confirmar')))) r = r.parentElement;
+    r = r || document.body;
+    const rotulo = folhas(r, n => n === 'valor')[0];
+    const entradas = [...r.querySelectorAll('input')].filter(i => visivel(i) && i.type !== 'hidden');
+    const inp = (rotulo && entradas.find(i => rotulo.compareDocumentPosition(i) & Node.DOCUMENT_POSITION_FOLLOWING)) || entradas.filter(i => /\d/.test(i.value)).slice(-1)[0];
+    const lido = inp ? (/,/.test(inp.value) ? money(inp.value) : parseFloat(inp.value)) : null;
+    const c = { raiz: r, rotulo, entradas, inp, lido };
+    c.ok = !!(inp && igual(lido, esperado)); c.confirmar = [...r.querySelectorAll('button')].some(x => nt(txt(x)).startsWith('confirmar'));
+    return c;
+  };
+  let c = ler();
+  if (c.ok) return c;
+  await esperar(() => { c = ler(); return c.ok; }, seg);
+  return c;
+};
 
 // ---------- painel
 let painel, linhaEl, corpoEl, pintaProgFn = null;
@@ -427,16 +448,16 @@ const etapaPdv = async () => {
     const estilo = e => { if (!e) return ''; const c = getComputedStyle(e); return (e.tagName || '').toLowerCase() + ' vis=' + c.visibility + ' op=' + c.opacity + ' disp=' + c.display + ' rects=' + e.getClientRects().length; };
     const ult = achados[achados.length - 1];
     await parar('A janela "Pagamento em Hubii" não abriu em ~45s. Parei. [v5; aba ' + (document.hidden ? 'em segundo plano' : 'em primeiro plano') + '; estado=' + document.visibilityState + '; foco=' + (document.hasFocus() ? 'sim' : 'não') + '; textos "pagamento em hubii": ' + achados.length + (achados[0] ? '; 1º: ' + estilo(achados[0]) : '') + (ult && ult !== achados[0] ? '; último: ' + estilo(ult) : '') + ']'); return;
+    return;
   }
   await sleep(600);
-  let raiz = modal; while (raiz && raiz.parentElement && !([...raiz.querySelectorAll('button')].some(x => nt(txt(x)).startsWith('confirmar')))) raiz = raiz.parentElement;
-  raiz = raiz || document.body;
-  const rotulo = folhas(raiz, n => n === 'valor')[0];
-  const entradas = [...raiz.querySelectorAll('input')].filter(i => visivel(i) && i.type !== 'hidden');
-  const inp = (rotulo && entradas.find(i => rotulo.compareDocumentPosition(i) & Node.DOCUMENT_POSITION_FOLLOWING)) || entradas.filter(i => /\d/.test(i.value)).slice(-1)[0];
-  const lido = inp ? (/,/.test(inp.value) ? money(inp.value) : parseFloat(inp.value)) : null;
   const aPagar = t.restante;
-  if (!inp || !igual(lido, aPagar)) { await parar('O valor na janela de pagamento (' + (inp ? inp.value : 'não achei o campo') + ') não é o RESTANTE ' + fmt(aPagar) + '. Parei.'); return; }
+  const campo = await esperarCampoValor(achaModal, modal, aPagar, 15);
+  if (!campo.ok) {
+    await parar('O valor na janela de pagamento (' + (campo.inp ? campo.inp.value : 'não achei o campo') + ') não é o RESTANTE ' + fmt(aPagar) + '. Parei. [esperei 15 s; campos visíveis: ' + campo.entradas.length + '; rótulo "Valor": ' + (campo.rotulo ? 'achado' : 'não achado') + '; botão Confirmar: ' + (campo.confirmar ? 'achado' : 'não achado') + ']');
+    return;
+  }
+  const raiz = campo.raiz, inp = campo.inp;
   const botoesConf = () => [...raiz.querySelectorAll('button')].filter(b => visivel(b) && nt(txt(b)).startsWith('confirmar') && !nt(txt(b)).includes('finalizar'));
   const ok = botoesConf().find(b => nt(txt(b)).includes('enter')) || botoesConf()[0];
   if (!ok) { await parar('Botão Confirmar da janela de pagamento não encontrado. Parei.'); return; }
