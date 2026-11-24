@@ -1,8 +1,8 @@
 {
-  "versao": "2.23.0",
-  "arquivo": "versoes/hubii-central-2.23.0.zip",
-  "sha256": "2fa69d9adf4309f128b014bff2361f26f735d6a50b70dabe30a1da6e901fdbc0",
-  "tamanho": 1010528,
-  "data": "2026-11-19T20:07:39Z",
-  "novidades": "- Nova aba Novidades: mostra o que a Central faz e o que mudou em cada versão (a lista se atualiza sozinha a cada versão nova).\n- Nova Planilha na nuvem (Ajuda e backup): a Central envia os números da loja (pedidos, produtos, horas, resumo por dia) para uma planilha do Google, para acompanhar em casa, no celular ou mostrar ao supervisor. Não vai nome, CPF, endereço nem valor de pedido. Passo a passo e botão de copiar o script dentro do painel.\n- Restaurar da planilha: em outro computador, cole o código de conexão e clique em Restaurar para trazer o histórico.\n- Aviso na aba Hoje quando o envio para a planilha der erro."
+  "versao": "2.23.1",
+  "arquivo": "versoes/hubii-central-2.23.1.zip",
+  "sha256": "f140ab7cb16d8a4872de80a94afde3f55ebe1fb67221cbb974ec7bac47ad1d90",
+  "tamanho": 1011157,
+  "data": "2026-11-24T12:18:06Z",
+  "novidades": "- Baixa Hubii: quando a janela de pagamento demora para mostrar o campo \"Valor\" (ou para preencher o valor), a Central espera até 15 s em vez de parar na hora com \"não achei o campo\". Se o valor for diferente do restante, continua parando, como antes.\n- A mensagem de parada agora traz detalhes (campos visíveis, rótulo \"Valor\", botão Confirmar) para achar a causa se repetir.\n- Se a janela \"Pagamento em Hubii\" não abrir, a rotina para ali (antes seguia e mostrava uma mensagem confusa)."
 }

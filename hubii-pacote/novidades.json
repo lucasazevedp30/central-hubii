@@ -1,6 +1,15 @@
 {
  "versoes": [
   {
+   "v": "2.23.1",
+   "data": "24/11/2026",
+   "itens": [
+    "Baixa Hubii: quando a janela de pagamento demora para mostrar o campo \"Valor\" (ou para preencher o valor), a Central espera até 15 s em vez de parar na hora com \"não achei o campo\". Se o valor for diferente do restante, continua parando, como antes.",
+    "A mensagem de parada agora traz detalhes (campos visíveis, rótulo \"Valor\", botão Confirmar) para achar a causa se repetir.",
+    "Se a janela \"Pagamento em Hubii\" não abrir, a rotina para ali (antes seguia e mostrava uma mensagem confusa)."
+   ]
+  },
+  {
    "v": "2.23.0",
    "data": "19/11/2026",
    "itens": [
