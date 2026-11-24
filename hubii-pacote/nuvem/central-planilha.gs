@@ -22,6 +22,11 @@ const ABA_DESEMP_DIA = 'Desempenho por dia';
 const ABA_DESEMP_MES = 'Desempenho por mês';
 const CAB_EVENTOS = ['Loja', 'Chave', 'Dia', 'Rotina', 'Início', 'Fim', 'Duração (s)', 'Itens', 'JSON'];
 const COL_EV_JSON = CAB_EVENTOS.length - 1;
+const ABA_RECUSAS = 'Recusas';
+const ABA_PROD_SEM = 'Produtos por semana';
+// uma linha por produto de cada relatório de recusas colado; as 3 últimas colunas guardam o período e o horário em ms (para restaurar)
+const CAB_RECUSAS = ['Loja', 'Relatório de', 'até', 'Colado em', 'EAN', 'Produto', 'Marca', 'Motivo (Hubii)', 'Ação sugerida', 'Qtd. recusada', 'Valor perdido (R$)', 'De (ms)', 'Até (ms)', 'Colado (ms)'];
+const CAB_PROD_SEM = ['Loja', 'Semana (segunda)', 'EAN', 'Produto', 'Unidades que saíram', 'Pedidos', 'Recusado (un.)', 'Recusado (R$)', 'Ação sugerida', 'Período do relatório de recusas'];
 const CAB_DESEMP_DIA = ['Loja', 'Dia', 'Descritivos', 'Etiquetas', 'Pendências analisadas', 'Baixas', 'Tempo da Central (min)', 'Tempo à mão estimado (min)', 'Tempo liberado (min)'];
 const CAB_DESEMP_MES = ['Loja', 'Mês', 'Dias de uso', 'Descritivos', 'Etiquetas', 'Pendências analisadas', 'Baixas', 'Tempo da Central (h)', 'Tempo à mão estimado (h)', 'Tempo liberado (h)', 'Dias de trabalho liberados'];
 // premissas de tempo à mão (segundos por item), as mesmas do relatório de desempenho da extensão; a Central manda as suas
@@ -36,6 +41,7 @@ function doPost(e) {
     if (d.acao === 'testar') return saida(testar());
     if (d.acao === 'historico') return saida(gravarHistorico(d));
     if (d.acao === 'eventos') return saida(gravarEventos(d));
+    if (d.acao === 'recusas') return saida(gravarRecusas(d));
     return saida({ ok: false, erro: 'acao desconhecida' });
   } catch (err) { return saida({ ok: false, erro: String(err) }); }
 }
@@ -47,11 +53,12 @@ function doGet(e) {
     if (p.acao === 'testar') return saida(testar());
     if (p.acao === 'historico') return saida(lerHistorico(p));
     if (p.acao === 'eventos') return saida(lerEventos(p));
+    if (p.acao === 'recusas') return saida(lerRecusas(p));
     return saida({ ok: false, erro: 'acao desconhecida' });
   } catch (err) { return saida({ ok: false, erro: String(err) }); }
 }
 
-const VERSAO_SCRIPT = 2;   // 1 = pedidos; 2 = pedidos + desempenho (eventos)
+const VERSAO_SCRIPT = 3;   // 1 = pedidos; 2 = + desempenho (eventos); 3 = + recusas e produtos por semana
 function testar() { return { ok: true, msg: 'conectado', planilha: SpreadsheetApp.getActive().getName(), versao: VERSAO_SCRIPT }; }
 
 function aba(nome, cab) {
@@ -105,7 +112,7 @@ function gravarHistorico(d) {
     });
     sujos.forEach(i => sh.getRange(i + 2, 1, 1, CAB_PEDIDOS.length).setValues([dados[i]]));
     if (dados.length > n) sh.getRange(n + 2, 1, dados.length - n, CAB_PEDIDOS.length).setValues(dados.slice(n));
-    resumoDia(dados);
+    resumoDia(dados); produtosPorSemana(dados);
     return { ok: true, novos, atualizados, ignorados, total: dados.length };
   } finally { lock.releaseLock(); }
 }
@@ -217,6 +224,79 @@ function lerEventos(p) {
   const loja = String(p.loja || '');
   const registros = vals.filter(l => !loja || l[0] === loja).map(l => l[COL_EV_JSON]).filter(x => typeof x === 'string' && x.charAt(0) === '{');
   return { ok: true, registros, proximo: desde + qtd <= ate ? desde + qtd : null, total: ate - 1 };
+}
+
+// ---------- recusas do Hubii por semana + produtos por semana
+const semEan = x => String(x).replace(/^'/, '');
+// segunda-feira da semana de um dia 'yyyy-MM-dd' (conta feita sobre o próprio texto da data, sem depender do fuso do script)
+function segundaDe(chave) {
+  const p = chave.split('-').map(Number); const dt = new Date(Date.UTC(p[0], p[1] - 1, p[2]));
+  dt.setUTCDate(dt.getUTCDate() - ((dt.getUTCDay() + 6) % 7));
+  return dt.toISOString().slice(0, 10);
+}
+function gravarRecusas(d) {
+  const lock = LockService.getScriptLock(); lock.waitLock(30000);
+  try {
+    const loja = String(d.loja || '').slice(0, 60); const sn = d.snap || {};
+    if (!sn.t || !Array.isArray(sn.itens)) return { ok: false, erro: 'relatorio invalido' };
+    const sh = aba(ABA_RECUSAS, CAB_RECUSAS);
+    const n = Math.max(0, sh.getLastRow() - 1);
+    const dados = n > 0 ? sh.getRange(2, 1, n, CAB_RECUSAS.length).getValues() : [];
+    const de = sn.de || 0, ate = sn.ate || 0;
+    // o relatório novo troca o do mesmo período (mesma loja, mesmo de/até)
+    const mantidos = dados.filter(l => !(l[0] === loja && l[11] === de && l[12] === ate));
+    const novos = sn.itens.filter(i => i && i.e).map(i => [loja, de ? diaTxt(de) : '', ate ? diaTxt(ate) : '', diaTxt(sn.t) + ' ' + hora(sn.t), "'" + semEan(i.e), seguro(String(i.n || '')), seguro(String(i.m || '')), seguro(String(i.mo || '')), seguro(String(i.a || '')), Number(i.q) || 0, Number(i.v) || 0, de, ate, sn.t]);
+    const todos = mantidos.concat(novos);
+    if (n > 0) sh.getRange(2, 1, n, CAB_RECUSAS.length).clearContent();
+    if (todos.length) sh.getRange(2, 1, todos.length, CAB_RECUSAS.length).setValues(todos);
+    const sp = SpreadsheetApp.getActive().getSheetByName(ABA_PEDIDOS);
+    const np = sp ? Math.max(0, sp.getLastRow() - 1) : 0;
+    produtosPorSemana(np > 0 ? sp.getRange(2, 1, np, CAB_PEDIDOS.length).getValues() : []);
+    return { ok: true, itens: novos.length, trocados: dados.length - mantidos.length };
+  } finally { lock.releaseLock(); }
+}
+
+// restauração: devolve cada relatório de recusas como um registro (paginado por relatório, a partir de 0)
+function lerRecusas(p) {
+  const sh = SpreadsheetApp.getActive().getSheetByName(ABA_RECUSAS);
+  if (!sh || sh.getLastRow() < 2) return { ok: true, registros: [], proximo: null, total: 0 };
+  const vals = sh.getRange(2, 1, sh.getLastRow() - 1, CAB_RECUSAS.length).getValues();
+  const loja = String(p.loja || ''); const grupos = {}; const ordem = [];
+  vals.forEach(l => {
+    if (loja && l[0] !== loja) return;
+    const k = l[11] + '|' + l[12] + '|' + l[13];
+    if (!grupos[k]) { grupos[k] = { t: l[13], de: l[11] || null, ate: l[12] || null, itens: [] }; ordem.push(k); }
+    grupos[k].itens.push({ e: semEan(l[4]), n: semEan(l[5]), m: l[6], mo: l[7], q: l[9], v: l[10], a: l[8] });
+  });
+  ordem.sort((a, b) => grupos[a].t - grupos[b].t);
+  const desde = Math.max(0, parseInt(p.desde, 10) || 0); const limite = Math.max(1, Math.min(50, parseInt(p.limite, 10) || 20));
+  return { ok: true, registros: ordem.slice(desde, desde + limite).map(k => JSON.stringify(grupos[k])), proximo: desde + limite < ordem.length ? desde + limite : null, total: ordem.length };
+}
+
+// aba "Produtos por semana": o que saiu (pelo descritivo) e o que o Hubii recusou, produto a produto, semana a semana
+function produtosPorSemana(dados) {
+  const mapa = {};
+  const item = (loja, sem, ean) => { const k = loja + '|' + sem + '|' + ean; return mapa[k] || (mapa[k] = { loja, sem, ean, n: '', un: 0, peds: {}, rq: 0, rv: 0, ra: '', per: '' }); };
+  dados.forEach(l => {
+    let r; try { r = JSON.parse(l[COL_JSON]); } catch (e) { return; }
+    const ts = tSaida(r); if (!ts || !(r.itens || []).length) return;
+    const sem = segundaDe(diaChave(ts));
+    r.itens.forEach(i => { if (!i.e) return; const a = item(l[0], sem, String(i.e)); if (i.n && i.n.length > a.n.length) a.n = i.n; a.un += i.q > 0 ? i.q : 1; a.peds[r.id] = 1; });
+  });
+  const sr = SpreadsheetApp.getActive().getSheetByName(ABA_RECUSAS);
+  if (sr && sr.getLastRow() > 1) {
+    sr.getRange(2, 1, sr.getLastRow() - 1, CAB_RECUSAS.length).getValues().forEach(l => {
+      const de = l[11]; if (!de) return;                    // sem período informado: não dá para saber a semana
+      const a = item(l[0], segundaDe(diaChave(de)), semEan(l[4]));
+      const nome = semEan(l[5]); if (nome && nome.length > a.n.length) a.n = nome;
+      a.rq += Number(l[9]) || 0; a.rv += Number(l[10]) || 0; a.ra = String(l[8] || '');
+      a.per = diaTxt(l[11]).slice(0, 5) + ' a ' + (l[12] ? diaTxt(l[12]).slice(0, 5) : '?');
+    });
+  }
+  const lista = Object.keys(mapa).map(k => mapa[k]).sort((a, b) => a.loja.localeCompare(b.loja) || (a.sem < b.sem ? 1 : a.sem > b.sem ? -1 : b.un - a.un));
+  const sh = aba(ABA_PROD_SEM, CAB_PROD_SEM);
+  const ult = sh.getLastRow(); if (ult > 1) sh.getRange(2, 1, ult - 1, CAB_PROD_SEM.length).clearContent();
+  if (lista.length) sh.getRange(2, 1, Math.min(lista.length, 5000), CAB_PROD_SEM.length).setValues(lista.slice(0, 5000).map(a => [a.loja, a.sem.slice(8) + '/' + a.sem.slice(5, 7) + '/' + a.sem.slice(0, 4), "'" + a.ean, seguro(a.n), a.un, Object.keys(a.peds).length, a.rq, Math.round(a.rv * 100) / 100, seguro(a.ra), a.per]));
 }
 
 // regra das sacolas: a mesma do painel (Compra contínua > Materiais de separação)

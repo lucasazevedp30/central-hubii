@@ -748,6 +748,13 @@ $('rCruzar').onclick = () => {
   if (!l.length) { $('rMsg').textContent = 'Não reconheci nenhuma linha com EAN. Copie a tabela de recusas inteira do painel do Hubii e cole de novo.'; return; }
   const dd = v => v ? new Date(v + 'T00:00:00').getTime() : null; const ra = $('rAte').value ? new Date($('rAte').value + 'T23:59:59').getTime() : null;
   try { localStorage.setItem(K_REC, JSON.stringify({ t: Date.now(), txt, de: dd($('rDe').value), ate: ra })); } catch (e) {}
+  { // guarda o relatório no arquivo do painel (vai para a planilha: aba Recusas e Produtos por semana)
+    const de = dd($('rDe').value), ate = ra;
+    if (de && ate) {
+      const snap = '{"t":' + Date.now() + ',"de":' + de + ',"ate":' + ate + ',"itens":' + JSON.stringify(l.map(r => ({ e: r.e, n: r.n, m: r.marca, mo: r.motivo, q: r.q, v: r.v || 0, a: r.acao }))) + '}';
+      fetch('/api/recusas', { method: 'POST', headers: { 'X-Central': '1' }, body: snap }).catch(() => {});
+    }
+  }
   RECCACHE = null; $('rTxt').value = ''; $('rMsg').textContent = l.length + ' produto(s) recusado(s) lido(s).'; mostrarCompra();
 };
 { const h = new Date(); h.setHours(0, 0, 0, 0); const seg = new Date(h); seg.setDate(seg.getDate() - ((seg.getDay() + 6) % 7)); const sex = new Date(seg); sex.setDate(sex.getDate() + 4); $('rDe').value = ymdInput(seg.getTime()); $('rAte').value = ymdInput(sex.getTime()); }

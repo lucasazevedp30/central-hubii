@@ -131,5 +131,12 @@ extensão (apaga os dados); recarregar sempre da mesma pasta.
   por mês; `linhaEvento` no `.gs` copia a regra de `calcular` do `registro.js` (mudou lá, mude lá também). `ultimoEv` em
   `nuvem-estado.json`; "Restaurar da planilha" traz pedidos e eventos. `VERSAO_SCRIPT = 2` no `.gs`: a Central avisa
   quando o script do usuário é antigo (ele precisa colar o código novo e fazer "Nova versão" na implantação).
+- Produtos por semana (2.26.0, planilha na nuvem): ao colar o relatório de recusas (com período de/até) o painel envia
+  um instantâneo a `POST /api/recusas` (linha `{"t":..,"de":..,"ate":..,"itens":[{e,n,m,mo,q,v,a}]}`, sem dados pessoais)
+  guardado em `%LOCALAPPDATA%\CentralHubii\recusas.ndjson`; `NuvemEnviar` manda um por vez (ponteiro `ultimoRec` em
+  `nuvem-estado.json`) e "Restaurar da planilha" traz de volta. No `.gs` (`VERSAO_SCRIPT = 3`): abas Recusas (1 linha por
+  produto/relatório; colar de novo o mesmo período troca) e Produtos por semana (por segunda-feira: unidades, pedidos,
+  recusado q/v e ação, a partir da aba Pedidos). Quem já tem o script antigo precisa colar o código novo e fazer "Nova versão".
+  Testado só em simulação (Node + Apps Script de mentira + servidor em pwsh + Playwright).
 - Reembolso da Shopee: esperando retorno do responsável. Vídeo: esperando áudios do ElevenLabs.
 - Por último (quando o resto estiver 100%): outras lojas — configuração por loja, instalador, fixar ID da extensão.

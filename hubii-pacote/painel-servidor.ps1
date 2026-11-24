@@ -60,6 +60,7 @@ $histDir = Join-Path $env:LOCALAPPDATA 'CentralHubii'
 if (-not $env:LOCALAPPDATA) { $histDir = Join-Path $dir 'dados' }
 $histArq = Join-Path $histDir 'historico.ndjson'
 $evArq = Join-Path $histDir 'eventos.ndjson'          # eventos de desempenho (cronometragem das rotinas), um por linha
+$recArq = Join-Path $histDir 'recusas.ndjson'           # um relatorio de recusas do Hubii por colagem (para comparar as semanas)
 $baseArq = Join-Path $histDir 'desempenho-base.json'   # premissas de tempo a mao (vem da extensao)
 $baseTxt = ''
 $utf8 = New-Object System.Text.UTF8Encoding($false)
@@ -228,7 +229,7 @@ function NuvemChave {
 }
 function NuvemCfg { $c = NuvemLerArq; if ($c -and ([string]$c.url) -match $nuvemRx -and ([string]$c.chave) -match '^[a-f0-9]{32}$') { return $c }; return $null }
 function NuvemEstadoLer { try { if (Test-Path $nuvemEstArq) { return ([System.IO.File]::ReadAllText($nuvemEstArq, $utf8) | ConvertFrom-Json) } } catch { }; return [pscustomobject]@{ ultimoU = 0 } }
-function NuvemEstadoGravar([int64]$u, [int64]$ev) { try { [System.IO.File]::WriteAllText($nuvemEstArq, (@{ ultimoU = $u; ultimoEv = $ev } | ConvertTo-Json -Compress), $utf8) } catch { } }
+function NuvemEstadoGravar([int64]$u, [int64]$ev, [int64]$rec) { try { [System.IO.File]::WriteAllText($nuvemEstArq, (@{ ultimoU = $u; ultimoEv = $ev; ultimoRec = $rec } | ConvertTo-Json -Compress), $utf8) } catch { } }
 function NuvemHttp($metodo, $url, [string]$corpo) {
     try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 } catch { }
     $p = @{ Uri = $url; UseBasicParsing = $true; TimeoutSec = 60; Method = $metodo; Headers = @{ 'User-Agent' = 'central-hubii' } }
@@ -248,7 +249,7 @@ function NuvemEnviar {
     $cfg = NuvemCfg
     if (-not $cfg) { return @{ ok = $false; msg = 'A planilha na nuvem ainda não foi configurada.' } }
     try {
-        $est = NuvemEstadoLer; $ultU = [int64]$est.ultimoU; $ultEv = [int64]$est.ultimoEv
+        $est = NuvemEstadoLer; $ultU = [int64]$est.ultimoU; $ultEv = [int64]$est.ultimoEv; $ultRec = [int64]$est.ultimoRec
         $lista = New-Object System.Collections.ArrayList
         if (Test-Path $histArq) {
             foreach ($l in [System.IO.File]::ReadAllLines($histArq, $utf8)) {
@@ -266,7 +267,7 @@ function NuvemEnviar {
             $corpo = $cab.Substring(0, $cab.Length - 1) + ',"registros":[' + ((@($ord[$i..$j]) | ForEach-Object { $_.l }) -join ',') + ']}'
             $r = NuvemHttp 'Post' ([string]$cfg.url) $corpo
             if (-not $r.ok) { throw ([string]$r.erro) }
-            $ultU = [int64]$ord[$j].u; NuvemEstadoGravar $ultU $ultEv
+            $ultU = [int64]$ord[$j].u; NuvemEstadoGravar $ultU $ultEv $ultRec
             $enviados += ($j - $i + 1); $i = $j + 1; $lotes++
         }
         # eventos de desempenho (tempo poupado): mesmo esquema, com o ponteiro "ultimoEv"
@@ -288,10 +289,27 @@ function NuvemEnviar {
             $corpo = $cab.Substring(0, $cab.Length - 1) + $(if ($baseJson.StartsWith('{')) { ',"base":' + $baseJson } else { '' }) + ',"eventos":[' + ((@($oe[$ie..$je]) | ForEach-Object { $_.l }) -join ',') + ']}'
             $r = NuvemHttp 'Post' ([string]$cfg.url) $corpo
             if (-not $r.ok) { throw ([string]$r.erro) }
-            $ultEv = [int64]$oe[$je].t; NuvemEstadoGravar $ultU $ultEv
+            $ultEv = [int64]$oe[$je].t; NuvemEstadoGravar $ultU $ultEv $ultRec
             $enviadosEv += ($je - $ie + 1); $ie = $je + 1; $lotes++
         }
-        $faltam = ($ord.Count - $i) + ($oe.Count - $ie)
+        # relatorios de recusas do Hubii (um por colagem; a planilha troca o do mesmo periodo)
+        $lrec = New-Object System.Collections.ArrayList
+        if (Test-Path $recArq) {
+            foreach ($l in [System.IO.File]::ReadAllLines($recArq, $utf8)) {
+                if (-not $l.StartsWith('{') -or -not $l.EndsWith('}')) { continue }
+                if ($l -match '^\{"t":(\d+),') { $t = [int64]$Matches[1] } else { continue }
+                if ($t -gt $ultRec) { [void]$lrec.Add([pscustomobject]@{ t = $t; l = $l }) }
+            }
+        }
+        $orec = @($lrec | Sort-Object t); $ir = 0
+        while ($ir -lt $orec.Count -and $lotes -lt 5) {
+            $cab = (@{ acao = 'recusas'; chave = [string]$cfg.chave; loja = [string]$cfg.loja; pc = [string]$env:COMPUTERNAME } | ConvertTo-Json -Compress)
+            $r = NuvemHttp 'Post' ([string]$cfg.url) ($cab.Substring(0, $cab.Length - 1) + ',"snap":' + $orec[$ir].l + '}')
+            if (-not $r.ok) { throw ([string]$r.erro) }
+            $ultRec = [int64]$orec[$ir].t; NuvemEstadoGravar $ultU $ultEv $ultRec
+            $enviadosEv++; $ir++; $lotes++
+        }
+        $faltam = ($ord.Count - $i) + ($oe.Count - $ie) + ($orec.Count - $ir)
         $nuvem.ok = Get-Date; $nuvem.erro = ''; $nuvem.faltam = $faltam
         $tot = $enviados + $enviadosEv
         return @{ ok = $true; enviados = $tot; faltam = $faltam; msg = $(if ($tot) { "Enviado: $enviados pedido(s) e $enviadosEv registro(s) de desempenho" + $(if ($faltam) { "; faltam $faltam" } else { '.' }) } else { 'Tudo já estava na planilha.' }) }
@@ -314,7 +332,7 @@ function NuvemTestar {
     try {
         $r = NuvemHttp 'Get' (([string]$cfg.url) + '?chave=' + $cfg.chave + '&acao=testar') $null
         if (-not $r.ok) { throw ([string]$r.erro) }
-        if ([int]$r.versao -lt 2) { return @{ ok = $true; aviso = $true; msg = 'Conectado à planilha "' + [string]$r.planilha + '", mas o script dela está desatualizado (falta a parte de desempenho). Clique em "Copiar código do script", cole no Apps Script (apagando o que estiver lá), salve e faça Implementar > Gerir implementações > lápis > Versão: Nova versão > Implementar. O endereço continua o mesmo.' } }
+        if ([int]$r.versao -lt 3) { return @{ ok = $true; aviso = $true; msg = 'Conectado à planilha "' + [string]$r.planilha + '", mas o script dela está desatualizado (falta a parte nova: desempenho, recusas e produtos por semana). Clique em "Copiar código do script", cole no Apps Script (apagando o que estiver lá), salve e faça Implementar > Gerir implementações > lápis > Versão: Nova versão > Implementar. O endereço continua o mesmo.' } }
         return @{ ok = $true; msg = 'Conectado à planilha "' + [string]$r.planilha + '".' }
     } catch { return @{ ok = $false; msg = (NuvemMsgErro $_.Exception.Message) } }
 }
@@ -364,9 +382,23 @@ function NuvemRestaurar {
             $desde = $r.proximo; $pag++
         }
         if ($evs.Count) { [System.IO.File]::AppendAllText($evArq, (($evs -join "`n") + "`n"), $utf8) }
+        # relatorios de recusas
+        $desde = 0; $pag = 0; $recs = New-Object System.Collections.ArrayList; $maxRec = [int64]0
+        while ($desde -ne $null -and $pag -lt 100) {
+            $r = NuvemHttp 'Get' (([string]$cfg.url) + '?chave=' + $cfg.chave + '&acao=recusas&desde=' + $desde + '&limite=20&loja=' + $loja) $null
+            if (-not $r.ok) { throw ([string]$r.erro) }
+            foreach ($x in @($r.registros)) {
+                $t = [string]$x
+                if (-not $t.StartsWith('{') -or -not $t.EndsWith('}') -or $t.Length -ge 400000 -or $t -match "[\r\n]" -or $t -notmatch '^\{"t":\d+,"de":' -or $t -notmatch '"itens":\[') { continue }
+                [void]$recs.Add($t)
+                if ($t -match '^\{"t":(\d+),') { $maxRec = [Math]::Max($maxRec, [int64]$Matches[1]) }
+            }
+            $desde = $r.proximo; $pag++
+        }
+        if ($recs.Count) { [System.IO.File]::AppendAllText($recArq, (($recs -join "`n") + "`n"), $utf8) }
         # o que veio da planilha nao precisa voltar para ela
-        $est = NuvemEstadoLer; NuvemEstadoGravar ([Math]::Max([int64]$est.ultimoU, $maxU)) ([Math]::Max([int64]$est.ultimoEv, $maxEv))
-        return @{ ok = $true; n = $linhas.Count; ev = $evs.Count; msg = "Restaurado da planilha: $($linhas.Count) pedido(s) e $($evs.Count) registro(s) de desempenho. Abra Histórico de pedidos, Compra contínua ou Desempenho para ver." }
+        $est = NuvemEstadoLer; NuvemEstadoGravar ([Math]::Max([int64]$est.ultimoU, $maxU)) ([Math]::Max([int64]$est.ultimoEv, $maxEv)) ([Math]::Max([int64]$est.ultimoRec, $maxRec))
+        return @{ ok = $true; n = $linhas.Count; ev = $evs.Count; rec = $recs.Count; msg = "Restaurado da planilha: $($linhas.Count) pedido(s), $($evs.Count) registro(s) de desempenho e $($recs.Count) relatório(s) de recusas. Abra Histórico de pedidos, Compra contínua ou Desempenho para ver." }
     } catch { return @{ ok = $false; msg = (NuvemMsgErro $_.Exception.Message) } }
 }
 function NuvemResumo {
@@ -549,6 +581,10 @@ while ($ligado -and $srv.IsListening) {
                 $txt = ''; if (Test-Path $evArq) { $txt = [System.IO.File]::ReadAllText($evArq, $utf8) }
                 Responder $ctx 200 $txt 'text/plain'
             }
+            elseif ($rota -eq '/api/recusas') {
+                $txt = ''; if (Test-Path $recArq) { $txt = [System.IO.File]::ReadAllText($recArq, $utf8) }
+                Responder $ctx 200 $txt 'text/plain'
+            }
             elseif ($rota -eq '/ext/registro.js') {
                 $js = [System.IO.File]::ReadAllText((Join-Path (Join-Path $dir 'extensao-central-hubii') 'registro.js'), $utf8)
                 Responder $ctx 200 $js 'application/javascript'
@@ -612,6 +648,12 @@ while ($ligado -and $srv.IsListening) {
             if (-not ($cab -match '"id":"([a-f0-9]{32})"' )) { Responder $ctx 400 'id invalido' 'text/plain'; continue }; $bid = $Matches[1]
             if (-not ($cab -match '"fonte":"([a-z0-9]{3,20})"')) { Responder $ctx 400 'fonte invalida' 'text/plain'; continue }; $bf = $Matches[1]
             [System.IO.File]::WriteAllText((Join-Path $bkDir "parte-$bid-$bf.json"), $corpo, $utf8)
+            Responder $ctx 200 '{"ok":true}' 'application/json'; continue
+        }
+        if ($rota -eq '/api/recusas') {
+            $c = $corpo.Trim()
+            if (-not $c.StartsWith('{') -or -not $c.EndsWith('}') -or $c.Length -gt 400000 -or $c -match "[\r\n]" -or $c -notmatch '^\{"t":\d+,"de":' -or $c -notmatch '"itens":\[') { Responder $ctx 400 'recusas invalidas' 'text/plain'; continue }
+            [System.IO.File]::AppendAllText($recArq, $c + "`n", $utf8); $nuvem.suja = $true
             Responder $ctx 200 '{"ok":true}' 'application/json'; continue
         }
         if ($rota -eq '/api/restaurar') {
