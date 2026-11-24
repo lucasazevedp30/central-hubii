@@ -115,5 +115,13 @@ extensão (apaga os dados); recarregar sempre da mesma pasta.
   A mensagem de parada traz detalhes (campos visíveis, rótulo, botão Confirmar). O valor estar "selecionado" não influencia
   a leitura (`.value`). Um chat antigo citou uma "2.15.4" com essa correção: ela nunca existiu nesta base (que parte da
   2.15.3 enviada pelo usuário e segue em 2.16.0+). Nunca relaxar a checagem valor == restante: Finalizar venda não se desfaz.
+- Prazo de despacho de hoje (2.24.0, cartão na aba Hoje): `content.js` `calcularPrazo` lê todos os status da aba Despacho
+  (`lerApi(null)`, que agora devolve `info[id] = {sla: next_sla, late: is_late}`) a cada 5 min, conta "a faturar" (Esperando
+  NFe), "a etiquetar" (Esperando Expedição / Etiqueta Hub não baixou sem etiqueta impressa pela Central), atrasados e o
+  próximo prazo de hoje; `window.__centralPrazo` -> `painel-ponte.js` (`d.prazo`) -> `paginas[]` -> `desenhar()` no painel.
+  O formato real de `next_sla` ainda NÃO foi visto (aceita ISO ou epoch); sem prazo legível o cartão mostra só as
+  contagens ("o Hubii não informou o prazo"). Confirmar na loja.
+- Aviso de material acabando (2.24.0, aba Hoje): `coberturaMateriais` usa a contagem de Materiais de separação; avisa
+  quando "dá para" < N dias (`aviso` em `central_materiais`, padrão 3) ou quando o estoque estimado zerou.
 - Reembolso da Shopee: esperando retorno do responsável. Vídeo: esperando áudios do ElevenLabs.
 - Por último (quando o resto estiver 100%): outras lojas — configuração por loja, instalador, fixar ID da extensão.

@@ -99,6 +99,11 @@ footer .esp{flex:1}
 .metricas.cinco{grid-template-columns:repeat(5,minmax(0,1fr))}
 @media (max-width:860px){.metricas.cinco{grid-template-columns:repeat(2,minmax(0,1fr))}}
 #nuCard input{font-family:inherit;font-size:13.5px;padding:8px 10px;border:1px solid var(--borda);border-radius:9px;background:#fff;color:var(--txt);box-sizing:border-box}
+.prazo{background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:14px 18px;margin-bottom:18px;display:none;gap:10px 28px;flex-wrap:wrap;align-items:center}
+.prazo .t{font-size:12.5px;color:var(--suave);font-weight:600}
+.prazo .g{font-size:26px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--roxoEsc)}
+.prazo.av{border-color:#E3A13B;background:var(--avF)}.prazo.er{border-color:var(--er);background:var(--erF)}.prazo.er .g{color:var(--er)}.prazo.ok{border-color:#9CD3AF;background:var(--okF)}.prazo.ok .g{color:var(--ok)}
+.prazo .n{display:flex;gap:18px;flex-wrap:wrap;font-size:13.5px}.prazo .n b{font-size:18px;font-variant-numeric:tabular-nums}
 .tag.nv{background:#E1EEFF;color:#0B4FA8}.tag.vt{background:#DDF3F0;color:#0B6B5F}
 .subabas{display:flex;gap:8px;margin:0 0 12px}
 .sub{background:var(--card);border:1px solid var(--borda);border-radius:999px;padding:7px 16px;font-size:13.5px;color:var(--suave);cursor:pointer}
@@ -135,6 +140,10 @@ footer .esp{flex:1}
     <div class="met"><div class="r">Pendências Hubii</div><div class="v" id="mPend">–</div><div class="s" id="sPend"></div></div>
   </div>
 
+  <div class="prazo" id="prazoCard">
+    <div><div class="t">Prazo de despacho de hoje</div><div class="g" id="pzG">–</div><div class="mut" id="pzS" style="font-size:12px"></div></div>
+    <div class="n" id="pzN"></div>
+  </div>
   <div class="andamento" id="andamento">
     <div class="lin">
       <span class="pulso"></span>
@@ -248,6 +257,7 @@ footer .esp{flex:1}
     <div class="filtros">
       <label>Período <select id="mPer"><option value="semana" selected>Esta semana (segunda até hoje)</option><option value="passada">Semana passada</option><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option></select></label>
       <label>Comprar para <input type="number" id="mDias" min="1" style="width:64px"> dias</label>
+      <label>Avisar na aba Hoje com menos de <input type="number" id="mAviso" min="1" style="width:64px"> dias</label>
       <label>Etiquetas por rolo da Argox <input type="number" id="mCap" min="1" style="width:76px"></label>
       <button id="mAtu">Atualizar</button>
     </div>
@@ -484,6 +494,11 @@ function desenhar(s) {
     b.onclick = () => { alertaVisto(ALERTA_HOJE.eans); ALERTA_HOJE.novos = 0; a.remove(); $('cPer').value = '7'; $('cDatas').style.display = 'none'; $('cAcao').value = 'alerta'; document.querySelector('.sub[data-s="cProd"]').click(); document.querySelector('.aba[data-v="vCompra"]').click(); };
     a.append(b); al.append(a);
   }
+  if (MAT_HOJE.length) {
+    const a = el('div', 'alerta av', 'Material acabando: ' + MAT_HOJE.join('; ') + '. '); const b = el('button', '', 'Ver materiais'); b.style.marginLeft = '8px';
+    b.onclick = () => { document.querySelector('.sub[data-s="cMat"]').click(); document.querySelector('.aba[data-v="vCompra"]').click(); };
+    a.append(b); al.append(a);
+  }
   if (s.nuvem && s.nuvem.ligada && s.nuvem.erro) avisa('Planilha na nuvem: ' + s.nuvem.erro, 'av');
   if (imp.mp === 'offline') avisa('O Windows diz que a MP-4200 TH está offline. Se ela estiver imprimindo normalmente, pode ignorar; senão, confira o cabo e se ela está ligada.', 'av');
   if (imp.padrao && !/MP-4200/.test(imp.padrao) && !pr.ajudante) avisa('A impressora padrão está em "' + imp.padrao + '" e o ajudante de etiquetas está desligado. Se já terminou as etiquetas, use "Voltar a MP-4200 como padrão".', 'av');
@@ -493,6 +508,27 @@ function desenhar(s) {
   const ult = k => Math.max(0, ...deHoje.map(f => (f.hoje && f.hoje[k] && f.hoje[k].ult) || 0));
   const rot = paginas.map(p => p.rotina).find(r => r && r.rodando) || null;
   let nDesc = soma('descritivos'); if (rot && rot.modo === 'descritivos' && rot.n) nDesc += rot.n;
+  // prazo de despacho de hoje (vem da página do Hubii, atualizado a cada 5 min)
+  { const pz = paginas.map(p => p.prazo).filter(x => x && x.t && Date.now() - x.t < 25 * 60000).sort((a, b) => b.t - a.t)[0];
+    const card = $('prazoCard');
+    if (!pz) card.style.display = 'none';
+    else {
+      const pend = pz.aFaturar + pz.aEtiquetar; const falta = pz.prazoTs ? pz.prazoTs - Date.now() : null;
+      const dur = ms => { const m = Math.max(0, Math.round(ms / 60000)); return m >= 60 ? Math.floor(m / 60) + 'h' + String(m % 60).padStart(2, '0') : m + ' min'; };
+      let cls = '', grande = '', sub = '';
+      if (!pend) { cls = 'ok'; grande = 'Tudo em dia'; sub = 'nada pendente com prazo de hoje'; }
+      else if (pz.atrasados) { cls = 'er'; grande = pz.atrasados + ' atrasado(s)'; sub = falta !== null && falta > 0 ? 'próximo prazo às ' + hhmm(pz.prazoTs) + ' (faltam ' + dur(falta) + ')' : 'já passou do prazo'; }
+      else if (falta !== null) { cls = falta < 3600000 ? 'er' : falta < 7200000 ? 'av' : ''; grande = 'faltam ' + dur(falta); sub = 'prazo às ' + hhmm(pz.prazoTs); }
+      else { grande = pend + ' pendente(s)'; sub = 'o Hubii não informou o prazo'; }
+      card.className = 'prazo ' + cls; card.style.display = 'flex';
+      $('pzG').textContent = grande; $('pzS').textContent = sub + ' · atualizado às ' + hhmm(pz.t);
+      const n = $('pzN'); n.replaceChildren();
+      const item = (v, r) => { const x = el('span'); x.append(el('b', '', v), document.createTextNode(' ' + r)); return x; };
+      n.append(item(pz.aFaturar, 'a faturar (descritivo)'), item(pz.aEtiquetar, 'a etiquetar'));
+      if (pz.atrasados) n.append(item(pz.atrasados, 'atrasados'));
+      if (pz.aguardando) n.append(item(pz.aguardando, 'aguardando o Hubii'));
+      if (pz.depois) n.append(item(pz.depois, 'com prazo de outro dia'));
+    } }
   let nEtq = soma('etiquetas');
   $('mDesc').textContent = nDesc; $('sDesc').textContent = ult('descritivos') ? 'último às ' + hhmm(ult('descritivos')) : (nDesc ? '' : 'nenhum ainda');
   $('mEtq').textContent = nEtq; $('sEtq').textContent = ult('etiquetas') ? 'última às ' + hhmm(ult('etiquetas')) : (nEtq ? '' : 'nenhuma ainda');
@@ -924,7 +960,7 @@ $('cxPadrao').onclick = () => { $('cxTxt').value = CX_PADRAO; try { localStorage
 const K_MAT = 'central_materiais';
 const MATS = [{ k: '30x20', nome: 'Sacola 30x20' }, { k: '35x45', nome: 'Sacola 35x45' }, { k: '45x50', nome: 'Sacola 45x50' }, { k: '50x60', nome: 'Sacola 50x60' }, { k: 'argox', nome: 'Etiqueta da Argox', rolo: true }];
 const matLer = () => { try { return JSON.parse(localStorage.getItem(K_MAT) || '{}') || {}; } catch (e) { return {}; } };
-const matCfg = () => { const m = matLer(); return { est: m.est || {}, dias: m.dias > 0 ? m.dias : 14, cap: m.cap > 0 ? m.cap : 200 }; };
+const matCfg = () => { const m = matLer(); return { est: m.est || {}, dias: m.dias > 0 ? m.dias : 14, cap: m.cap > 0 ? m.cap : 200, aviso: m.aviso > 0 ? m.aviso : 3 }; };
 const matGravar = c => { try { localStorage.setItem(K_MAT, JSON.stringify(c)); } catch (e) {} };
 // peso em kg tirado do nome do produto ("2,5 Kg", "400 g", "85g"); null se não tiver
 const pesoKg = n => { const m = [...String(n || '').matchAll(/(\d+(?:[.,]\d+)?)\s*(kg|g)\b/gi)].pop(); if (!m) return null; const v = parseFloat(m[1].replace(',', '.')); return /kg/i.test(m[2]) ? v : v / 1000; };
@@ -958,6 +994,7 @@ function mostrarMateriais() {
   if (!$('mEst')) return;
   const cfg = matCfg(); const agora = Date.now();
   if (document.activeElement !== $('mDias')) $('mDias').value = cfg.dias;
+  if (document.activeElement !== $('mAviso')) $('mAviso').value = cfg.aviso;
   if (document.activeElement !== $('mCap')) $('mCap').value = cfg.cap;
   $('mComprarCab').textContent = 'Comprar (para ' + cfg.dias + ' dias)';
   // média por dia: últimos 14 dias (ou desde o primeiro pedido com produtos, se faz menos tempo)
@@ -969,7 +1006,7 @@ function mostrarMateriais() {
     const e = cfg.est[m.k]; const tr = el('tr');
     const inp = el('input', 'mat-in'); inp.type = 'number'; inp.min = '0'; inp.step = m.rolo ? '0.5' : '1'; if (e) inp.value = e.q;
     const bt = el('button', '', 'Salvar'); bt.style.marginLeft = '6px';
-    bt.onclick = () => { const v = parseFloat(String(inp.value).replace(',', '.')); if (!(v >= 0)) { toast('Digite a quantidade contada.'); return; } const c = matCfg(); c.est[m.k] = { q: v, t: Date.now() }; matGravar(c); toast(m.nome + ': contagem salva.'); mostrarMateriais(); };
+    bt.onclick = () => { const v = parseFloat(String(inp.value).replace(',', '.')); if (!(v >= 0)) { toast('Digite a quantidade contada.'); return; } const c = matCfg(); c.est[m.k] = { q: v, t: Date.now() }; matGravar(c); toast(m.nome + ': contagem salva.'); mostrarMateriais(); atualizarMateriaisHoje(); };
     const tdC = el('td'); tdC.append(inp, document.createTextNode(m.rolo ? ' rolos' : ' un.'), bt); if (e) tdC.append(el('div', 'mut', 'contado em ' + diaHora(e.t)));
     const media = base[m.k] / diasBase;
     const usados = e ? usoMateriais(e.t, agora).c[m.k] : null;
@@ -999,7 +1036,7 @@ function mostrarMateriais() {
 document.querySelectorAll('.sub').forEach(b => b.onclick = () => { document.querySelectorAll('.sub').forEach(x => x.classList.toggle('on', x === b)); ['cProd', 'cMat', 'cResumo'].forEach(k => { $(k).style.display = b.dataset.s === k ? '' : 'none'; }); if (b.dataset.s === 'cMat') carregarHist().then(mostrarMateriais); if (b.dataset.s === 'cResumo') carregarHist().then(mostrarResumo); });
 $('mPer').addEventListener('input', mostrarMateriais);
 $('mAtu').onclick = () => carregarHist(true).then(mostrarMateriais);
-['mDias', 'mCap'].forEach(k => $(k).addEventListener('change', () => { const c = matCfg(); const v = parseInt($(k).value, 10); if (v > 0) { if (k === 'mDias') c.dias = v; else c.cap = v; matGravar(c); } mostrarMateriais(); }));
+['mDias', 'mCap', 'mAviso'].forEach(k => $(k).addEventListener('change', () => { const c = matCfg(); const v = parseInt($(k).value, 10); if (v > 0) { if (k === 'mDias') c.dias = v; else if (k === 'mAviso') c.aviso = v; else c.cap = v; matGravar(c); } mostrarMateriais(); atualizarMateriaisHoje(); }));
 
 
 // ---------- resumo da semana (segunda a sexta, ou até sábado)
@@ -1200,6 +1237,29 @@ async function carregarNovidades() {
   $('novAnt').style.display = (d.anteriores || []).length ? '' : 'none';
   if (!(d.versoes || []).length) $('novLista').append(el('p', 'mut', 'Ainda não há novidades registradas.'));
 }
+
+// ---------- aviso de material acabando na aba Hoje (usa a contagem digitada em Materiais de separação)
+let MAT_HOJE = [];
+function coberturaMateriais() {
+  const cfg = matCfg(); const agora = Date.now();
+  const prim = Math.min(...HIST.filter(r => (r.itens || []).length && tSaida(r)).map(tSaida));
+  const diasBase = Math.max(1, Math.min(14, Math.ceil((agora - (isFinite(prim) ? prim : agora)) / 864e5)));
+  const base = usoMateriais(agora - diasBase * 864e5, agora).c;
+  return MATS.map(m => {
+    const e = cfg.est[m.k]; if (!e) return null;
+    const media = base[m.k] / diasBase; const atual = (m.rolo ? e.q * cfg.cap : e.q) - usoMateriais(e.t, agora).c[m.k];
+    return { nome: m.nome, atual, dias: media > 0 ? atual / media : null };
+  }).filter(Boolean);
+}
+async function atualizarMateriaisHoje() {
+  try {
+    await carregarHist(); const lim = matCfg().aviso;
+    MAT_HOJE = coberturaMateriais().filter(x => x.dias !== null && (x.dias < lim || x.atual <= 0))
+      .map(x => x.atual <= 0 ? x.nome + ': o estoque estimado acabou (confira e conte de novo)' : x.nome + ': dá para ' + (x.dias < 1 ? 'menos de 1 dia' : Math.floor(x.dias) + ' dia(s)'));
+  } catch (e) {}
+}
+setTimeout(atualizarMateriaisHoje, 4500);
+setInterval(atualizarMateriaisHoje, 10 * 60000);
 
 // ---------- alerta de saída na aba Hoje (últimos 7 dias; recalcula a cada 10 minutos)
 let ALERTA_HOJE = null;

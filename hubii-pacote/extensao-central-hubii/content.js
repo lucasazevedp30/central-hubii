@@ -283,18 +283,18 @@ async function lerApi(statusRotulo) {
   const alvo = statusRotulo ? nt(statusRotulo) : null; let ultimo = '';
   for (const [ordem, por] of [['next_sla', 500], ['order_id', 100], ['accepted_at', 100], ['next_sla', 100]]) {
     try {
-      const ids = []; const mapa = {}; let total = null, paginas = 1;
+      const ids = []; const mapa = {}; const info = {}; let total = null, paginas = 1;
       for (let pag = 1; pag <= paginas && pag <= 60; pag++) {
         const j = await pedir(ordem, pag, por);
         if (!j || !Array.isArray(j.data)) throw new Error('resposta sem lista');
         total = Number(j.total); paginas = Number(j.total_pages) || 1;
         j.data.forEach(o => {
           const id = String(o.order_id || '');
-          if (/^\d{5,9}$/.test(id)) mapa[id] = String(o.delivery_status_str || '');
+          if (/^\d{5,9}$/.test(id)) { mapa[id] = String(o.delivery_status_str || ''); info[id] = { sla: o.next_sla, late: o.is_late }; }
           if (/^\d{5,9}$/.test(id) && (!alvo || nt(o.delivery_status_str) === alvo) && (!o.expedition_type || o.expedition_type === 'drop_off') && !ids.includes(id)) ids.push(id);
         });
       }
-      if (Number.isFinite(total) && ids.length === total) return { ok: true, ids, total, ordem, mapa };
+      if (Number.isFinite(total) && ids.length === total) return { ok: true, ids, total, ordem, mapa, info };
       ultimo = 'li ' + ids.length + ' de ' + total + ' (ordem ' + ordem + ')';
     } catch (e) {
       ultimo = e.message + ' (ordem ' + ordem + ')';
@@ -947,6 +947,33 @@ function procurarProduto() {
   };
   inp.focus();
 }
+
+/* ---------- prazo de despacho (aba Hoje do painel) ---------- */
+// Lê todos os pedidos da aba Despacho (a mesma lista do servidor do Hubii) e conta o que ainda precisa de ação hoje:
+// "a faturar" (Esperando NFe) e "a etiquetar" (Esperando Expedição / Etiqueta Hub não baixou, sem etiqueta impressa pela Central).
+// O prazo de cada pedido vem de next_sla e "atrasado" de is_late. Só leitura: não clica em nada.
+const slaMs = v => { if (v == null || v === '') return NaN; if (typeof v === 'number') return v < 1e12 ? v * 1000 : v; return Date.parse(String(v)); };
+async function calcularPrazo() {
+  const r = await lerApi(null);
+  if (!r.ok) return null;
+  const agora = Date.now(); const d0 = new Date(); d0.setHours(0, 0, 0, 0); const i0 = d0.getTime(), i1 = i0 + 864e5;
+  const hs = histSet();
+  const c = { t: agora, total: r.ids.length, aFaturar: 0, aEtiquetar: 0, atrasados: 0, depois: 0, semPrazo: 0, aguardando: 0, prazoTs: null };
+  r.ids.forEach(id => {
+    const x = r.info[id] || {}; const st = nt(r.mapa[id] || ''); const sla = slaMs(x.sla);
+    const faturar = st.includes('esperando nfe'); const etiquetar = (st.includes('esperando expedicao') || st.includes('etiqueta hub nao baixou')) && !hs.has(id);
+    if (!faturar && !etiquetar) { if (st.includes('aguardando andamento') || st.includes('esperando etiqueta da transportadora')) c.aguardando++; return; }
+    const atrasado = x.late === 1 || x.late === true || x.late === '1' || (!isNaN(sla) && sla < agora);
+    if (isNaN(sla)) c.semPrazo++;
+    else if (sla >= i1) { c.depois++; return; }                 // prazo de outro dia: não entra na conta de hoje
+    if (faturar) c.aFaturar++; else c.aEtiquetar++;
+    if (atrasado) c.atrasados++;
+    else if (!isNaN(sla) && (c.prazoTs === null || sla < c.prazoTs)) c.prazoTs = sla;   // próximo prazo de hoje que ainda não passou
+  });
+  return c;
+}
+const atualizarPrazo = async () => { try { if (rodando || ocupado) return; const c = await calcularPrazo(); if (c) window.__centralPrazo = c; } catch (e) {} };
+setTimeout(atualizarPrazo, 20000); setInterval(atualizarPrazo, 5 * 60000);
 
 /* ---------- dados para a conferência de despacho (conferir.js) ---------- */
 window.__centralConfDados = {

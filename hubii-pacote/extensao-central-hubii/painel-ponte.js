@@ -18,6 +18,7 @@
         const lista = S.lista.map(String); const conf = Object.keys(S.conf || {}).filter(id => lista.includes(String(id)));
         d.conf = { conf: conf.length, total: lista.length, t0: S.t0 || 0 };
       }
+      if (window.__centralPrazo) d.prazo = window.__centralPrazo;
       const L = lj('hubii_central_log');
       if (Array.isArray(L)) d.log = L.slice(-8).map(x => ({ t: x.t, m: String(x.m || '').slice(0, 200) }));
     } else {
