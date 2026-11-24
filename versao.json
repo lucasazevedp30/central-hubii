@@ -1,8 +1,8 @@
 {
-  "versao": "2.25.0",
-  "arquivo": "versoes/hubii-central-2.25.0.zip",
-  "sha256": "555a53691beac2a45bb590cf225e4357778bb1e0412138f1e9df55b55bcb4c23",
-  "tamanho": 1017359,
-  "data": "2026-11-24T19:19:03Z",
-  "novidades": "- Nova aba Desempenho no painel: o mesmo relatório de desempenho da extensão (tempo liberado, fechamento do mês com projeção, por semana, por dia e execuções), sem precisar abrir o Hubii. Dá para copiar o resumo para mandar ao supervisor.\n- A planilha do Google ganha as abas Eventos, Desempenho por dia e Desempenho por mês (tempo da Central, tempo à mão estimado e tempo liberado).\n- Importante: quem já ligou a planilha precisa atualizar o script do Google: em Ajuda e backup > Planilha na nuvem, \"Copiar código do script\", colar no Apps Script e fazer Implementar > Gerir implementações > lápis > Nova versão. A Central avisa quando o script está desatualizado.\n- \"Restaurar da planilha\" agora também traz os registros de desempenho."
+  "versao": "2.26.0",
+  "arquivo": "versoes/hubii-central-2.26.0.zip",
+  "sha256": "e81d91de9eeab7585286bada301fed21403296f7708479b72221b255561ec435",
+  "tamanho": 1019794,
+  "data": "2026-11-24T19:25:10Z",
+  "novidades": "- Planilha na nuvem: nova aba \"Produtos por semana\" mostra, semana a semana, o que saiu e o que foi recusado em cada produto (para ver que nem sempre sai ou é recusado a mesma coisa).\n- Planilha na nuvem: nova aba \"Recusas\" guarda cada relatório de recusas colado (com o período). Colar de novo o mesmo período troca o anterior.\n- \"Restaurar da planilha\" também traz de volta os relatórios de recusas.\n- Importante: para as abas novas, copie o código novo (Ajuda e backup > Planilha na nuvem), cole no Apps Script e faça Implementar > Gerenciar implantações > lápis > Nova versão."
 }

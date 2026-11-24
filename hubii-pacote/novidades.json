@@ -1,6 +1,16 @@
 {
  "versoes": [
   {
+   "v": "2.26.0",
+   "data": "24/11/2026",
+   "itens": [
+    "Planilha na nuvem: nova aba \"Produtos por semana\" mostra, semana a semana, o que saiu e o que foi recusado em cada produto (para ver que nem sempre sai ou é recusado a mesma coisa).",
+    "Planilha na nuvem: nova aba \"Recusas\" guarda cada relatório de recusas colado (com o período). Colar de novo o mesmo período troca o anterior.",
+    "\"Restaurar da planilha\" também traz de volta os relatórios de recusas.",
+    "Importante: para as abas novas, copie o código novo (Ajuda e backup > Planilha na nuvem), cole no Apps Script e faça Implementar > Gerenciar implantações > lápis > Nova versão."
+   ]
+  },
+  {
    "v": "2.25.0",
    "data": "24/11/2026",
    "itens": [
